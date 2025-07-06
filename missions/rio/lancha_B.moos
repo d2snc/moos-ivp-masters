@@ -153,8 +153,8 @@ ProcessConfig = pContactMgrV20
   alert_range_color = gray70
   cpa_range_color   = gray30
 
-	alert = id=avdcol_, var=CONTACT_INFO, val="name=$[VNAME] # contact=$[VNAME]"
-  alert = id=avdcol_, alert_range=15, cpa_range=5
+	alert = id=avdcol_, var=CONTACT_INFO, val="contact=$[VNAME] # x=$[X] # y=$[Y] # lat=$[LAT] # lon=$[LON] # hdg=$[HDG] # spd=$[SPD]", onflag=SAY_MOOS=hello
+  alert = id=avdcol_, alert_range=600, cpa_range=620
 	
 	//match_region = pts = {60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40}
 	//match_type = kayak, uuv
@@ -164,6 +164,10 @@ ProcessConfig = pContactMgrV20
 	
 	post_closest_range   = true
   hold_alerts_for_helm = true
+  post_all_ranges = true
+  display_radii = true
+  alert_range_color = gray70
+  cpa_range_color   = gray30
 }
 
 //--------------------------------------------------
