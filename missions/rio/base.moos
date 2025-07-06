@@ -1,0 +1,235 @@
+//--------------------------------------------------------
+// Base Config file
+// D. Lima, CASNAV
+// Base para simulação de Collision Avoidance
+
+ServerHost = localhost
+ServerPort = 9000
+Community  = base
+
+MOOSTimeWarp = 1
+//LatOrigin  = 43.825300 
+//LongOrigin = -70.330400 
+
+//Rio de Janeiro
+LatOrigin = -22.93335 
+LongOrigin = -43.136666665 
+
+  
+//--------------------------------------------------------
+Processconfig = ANTLER
+{
+  MSBetweenLaunches = 100
+
+  Run = MOOSDB          @ NewConsole = false
+  Run = pRealm          @ NewConsole = false
+	Run = pMarineViewer   @ NewConsole = false
+  Run = pLogger         @ NewConsole = false
+  Run = uProcessWatch   @ NewConsole = false
+  Run = pShare          @ NewConsole = false
+  Run = pHostInfo       @ NewConsole = false
+  Run = uFldShoreBroker @ NewConsole = false
+  Run = uFldNodeComms   @ NewConsole = false
+}
+
+//--------------------------------------------------
+// pHostInfo Config Block
+
+ProcessConfig = pHostInfo
+{
+  AppTick 	= 1
+  CommsTick = 1
+
+  default_hostip_force = localhost
+}
+
+//--------------------------------------------------
+// pShare Config Block
+
+ProcessConfig = pShare
+{
+  AppTick    = 2
+  CommsTick  = 2
+
+  input = route =  localhost:9200, white_list=DEPLOY & MOOS_MANUAL_OVERRIDE & NODE_BROKER_ACK & APPCAST_REQ 
+}
+
+//--------------------------------------------------
+// uProcessWatch Config Block
+
+ProcessConfig = uProcessWatch
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  allow_retractions = true
+  
+  watch_all = true      // default is true
+  nowatch = uMAC*
+  nowatch = uXMS*
+  nowatch = uPokeDB*
+  nowatch = uQueryDB*
+
+  summary_wait = 12
+}
+
+
+
+//--------------------------------------------------
+// uFldShoreBroker Config Block
+
+ProcessConfig = uFldShoreBroker
+{ 
+  AppTick       = 1
+  CommsTick     = 1
+
+  // Note: [QBRIDGE = FOO]  is shorthand for                    
+  //       [BRIDGE = src=FOO_$V,  alias=FOO] and                
+  //       [BRIDGE = src=FOO_ALL, alias=FOO]
+
+	auto_bridge_appcast = true
+	
+  qbridge  = DEPLOY, RETURN, STATION_KEEP, NODE_REPORT, NODE_MESSAGE
+  qbridge  = MOOS_MANUAL_OVERRIDE, AVOID, UP_LOITER
+  qbridge  = RETURN_UPDATES, BCM_DISPLAY_RADII
+  qbridge  = CONTACT_INFO, NODE_GROUP_UPDATE
+  qbridge  = BHV_ABLE_FILTER
+
+  bridge   = src=UP_LOITER_$N, alias=UP_LOITER
+  bridge   = src=DRIFT_VECTOR_ADD, alias=DRIFT_VECTOR_ADD
+  bridge   = src=HELM_MAP_CLEAR, alias=HELM_MAP_CLEAR
+  bridge   = src=MISSION_HASH, alias=MISSION_HASH
+}
+
+//--------------------------------------------------
+// uFldNodeComms Config Block
+
+ProcessConfig = uFldNodeComms
+{
+  AppTick   = 2
+  CommsTick = 2
+
+  comms_range      = 500
+  critical_range   = 25
+  min_msg_interval = 15
+  max_msg_length   = 1000
+  groups           = true
+
+	app_logging = true
+	
+  view_node_rpt_pulses = false
+}
+
+//--------------------------------------------------
+// pLogger Config Block
+
+ProcessConfig = pLogger
+{
+  AppTick       = 10
+  CommsTick     = 10
+  
+  File          = XLOG_BASE
+  PATH          = ./
+  SyncLog       = true @ 0.2
+  AsyncLog      = true
+  FileTimeStamp = true
+
+  LogAuxSrc     = true
+
+  // Log it all!!!!!
+  WildCardLogging = true 
+
+  WildCardOmitPattern = *_STATUS
+  WildCardOmitPattern = DB_VARSUMMARY
+  WildCardOmitPattern = DB_RWSUMMARY
+  WildCardOmitPattern = *_ITER_GAP
+  WildCardOmitPattern = *_ITER_LEN
+}
+
+//--------------------------------------------------
+// uLoadWatch Config Block
+
+ProcessConfig = uLoadWatch
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  thresh = app=pHelmIvP,  gapthresh=3
+  thresh = app=pHostInfo, gapthresh=5
+  thresh = app=any,       gapthresh=2.0
+  thresh = app=uMemWatch, gapthresh=50
+
+  breach_trigger = 5
+}
+
+//--------------------------------------------------------
+ProcessConfig = pMarineViewer
+{
+  AppTick    = 4
+  CommsTick  = 4
+
+  tiff_file            = 1511geotiff.tif
+	//tiff_file            = MIT_SP.tif
+
+  set_pan_x            = -90
+  set_pan_y            = -280
+  zoom                 = 0.65
+  vehicle_shape_scale  = 20
+  hash_delta           = 50
+  hash_shade           = 0.22
+  hash_viewable        = false
+  center_view          = average
+
+  trails_point_size   = 1
+
+	//op_vertex = x=-83, y=-47,    lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=-46.4, y=-129.2, lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=94.6, y=-62.2,   lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=58,   y=20,    lwidth=1,lcolor=yellow,looped=true,group=moa
+
+  // Appcast configuration
+  appcast_height       = 75
+  appcast_width        = 30
+  appcast_viewable     = true
+  appcast_color_scheme = indigo
+  nodes_font_size      = xlarge
+  procs_font_size      = xlarge
+  appcast_font_size    = large
+  
+  // datum_viewable = true
+  // datum_size     = 18
+  // gui_size = small
+
+  // left_context[survey-point] = DEPLOY=true
+  // left_context[survey-point] = MOOS_MANUAL_OVERRIDE=false
+  // left_context[survey-point] = RETURN=false
+
+  right_context[return] = DEPLOY=true
+  right_context[return] = MOOS_MANUAL_OVERRIDE=false
+  right_context[return] = RETURN=false
+
+  scope  = SUMMARY
+  scope  = RETURN
+  scope  = WPT_STAT
+  scope  = VIEW_SEGLIST
+  scope  = VIEW_POINT
+  scope  = VIEW_POLYGON
+  scope  = MVIEWER_LCLICK
+  scope  = MVIEWER_RCLICK
+
+  cmd = label=DEPLOY, var=DEPLOY,  sval=true,  receivers=all:$(VNAMES)
+  cmd = label=DEPLOY, var=MOOS_MANUAL_OVERRIDE,  sval=false,  receivers=all:$(VNAMES)
+
+  button_one = DEPLOY # DEPLOY_ALL=true
+  button_one = MOOS_MANUAL_OVERRIDE_ALL=false # RETURN_ALL=false
+  button_two = RETURN # RETURN_ALL=true
+  button_three = DEPLOY_LANCHA_A # DEPLOY_lancha_A=true # MOOS_MANUAL_lancha_A=false # RETURN_lancha_A=false
+  button_four = DEPLOY_LANCHA_B # DEPLOY_lancha_B=true
+
+  action  = MENU_KEY=deploy # DEPLOY_ALL = true # RETURN_ALL = false
+  action+ = MENU_KEY=deploy # MOOS_MANUAL_OVERRIDE_ALL=false
+  action  = RETURN_ALL=true
+  action  = UPDATES_RETURN=speed=1.4
+}
+
+

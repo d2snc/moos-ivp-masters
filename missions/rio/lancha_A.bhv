@@ -1,0 +1,126 @@
+//--------    FILE: alpha.bhv   -------------
+
+initialize   DEPLOY = false
+initialize   RETURN = false
+	
+//----------------------------------------------
+Behavior = BHV_Waypoint
+{ 
+  name      = waypt_survey
+  pwt       = 100
+  condition = RETURN = false
+  condition = DEPLOY = true
+  endflag   = RETURN = true
+
+	endflag   = SUMMARY=speed=$[SPEED],time=$[DUR_RUN_TIME]
+	
+	configflag = CRUISE_SPD = $[SPEED]
+
+	activeflag = INFO=$[OWNSHIP]
+	activeflag = INFO=$[BHVNAME]
+	activeflag = INFO=$[BHVTYPE]
+
+	cycleflag = CINFO=$[OSX],$[OSY]
+
+	wptflag = PREV=$(PX),$(PY)
+	wptflag = NEXT=$(NX),$(NY)
+	wptflag = TEST=$(X),$(Y)
+	wptflag = OSPOS=$(OSX),$(OSY)
+	wptflag_on_start = true
+
+  updates    = WPT_UPDATE
+  perpetual  = true
+
+	         speed_alt = 1.2
+       use_alt_speed = true
+                lead = 8
+         lead_damper = 1
+       lead_to_start = true
+               speed = 5   // meters per second
+        capture_line = true
+      capture_radius = 5.0
+         slip_radius = 15.0
+	efficiency_measure = all
+	           polygon = -2149,2482
+
+               order = normal
+             repeat  = 0
+
+    visual_hints = nextpt_color=yellow
+    visual_hints = nextpt_vertex_size=8
+    visual_hints = nextpt_lcolor=gray70
+    visual_hints = vertex_color=dodger_blue, edge_color=white
+    visual_hints = vertex_size=5, edge_size=1
+}
+
+//----------------------------------------------
+Behavior=BHV_Waypoint
+{
+  name      = waypt_return
+  pwt       = 100
+  condition = RETURN = true
+  condition = DEPLOY = true
+  perpetual = true
+  updates   = RETURN_UPDATE
+  endflag   = RETURN = false
+  endflag   = DEPLOY = false
+  endflag   = MISSION = complete
+	
+           speed = 2.0
+  capture_radius = 2.0
+     slip_radius = 8.0
+          points = 0,-20
+ }
+
+//----------------------------------------------
+Behavior=BHV_ConstantSpeed
+{
+  name      = const_speed
+  pwt       = 100
+  condition = SPD=true
+  condition = DEPLOY = true
+  perpetual = true
+  updates   = SPEED_UPDATE
+  endflag   = SPD = false
+
+           speed = 0.5
+		    duration = 10
+	duration_reset = CONST_SPD_RESET=true
+	
+}
+
+//----------------------------------------------
+
+//Behavior = BHV_AvdColregsV19
+// {
+//   // General Behavior Parameters
+//   // ---------------------------
+//   name         = avdcollision_                     // example
+//   pwt          = 200                               // example
+//   condition    = DEPLOY = true                      // example
+//   updates      = CONTACT_INFO                      // example
+//   endflag      = CONTACT_RESOLVED = $[CONTACT]     // example 
+//   templating   = single                             // example
+//
+//
+//   // General Contact Behavior Parameters
+//   // -----------------------------------
+//       bearing_lines = white:0, green:0.65, yellow:0.8, red:1.0   // example
+//
+//             contact = lancha_B            // example
+//               decay = 15,30            // default (seconds)
+//         extrapolate = true             // default
+//    on_no_contact_ok = true             // default
+//         time_on_leg = 60               // default (seconds)
+//
+//
+//   // Parameters specific to this behavior
+//   // ------------------------------------
+//      completed_dist = 500              // default
+//   max_util_cpa_dist = 75               // default
+//   min_util_cpa_dist = 10               // default
+//    no_alert_request = false            // default
+//           pwt_grade = quadratic            // default
+//      pwt_inner_dist = 150               // default
+//      pwt_outer_dist = 300              // default
+// }
