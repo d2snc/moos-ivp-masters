@@ -35,6 +35,7 @@ Processconfig = ANTLER
 
   Run = uSimMarineV22  @ NewConsole = false
   Run = pContactSpawn @ NewConsole = false
+  Run = pColAvd @ NewConsole = false
 	}
 
 //------------------------------------------
@@ -52,6 +53,15 @@ ProcessConfig = uSimMarineV22
 	turn_spd_loss = 0.4
 }
 
+// pColAvd Config Block
+
+ProcessConfig = pColAvd
+{
+  AppTick 	= 1
+  CommsTick = 1
+
+}
+
 // pContactSpawn Config Block
 
 ProcessConfig = pContactSpawn
@@ -61,8 +71,6 @@ ProcessConfig = pContactSpawn
 
   
 }
-
-
 	
 //--------------------------------------------------
 // pShare Config Block
