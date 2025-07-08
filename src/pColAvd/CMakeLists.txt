@@ -14,7 +14,9 @@ ADD_EXECUTABLE(pColAvd ${SRC})
 TARGET_LINK_LIBRARIES(pColAvd
    ${MOOS_LIBRARIES}
    apputil
+   geometry
    mbutil
+   genutil
    m
    pthread)
 

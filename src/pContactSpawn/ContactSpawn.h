@@ -27,11 +27,12 @@ class ContactSpawn : public AppCastingMOOSApp
 
  protected:
    void registerVariables();
-   void spawnContact();
+   void spawnContactWithParameters(double heading, double relative_bearing, double distance, double speed);
+   void updateContactParameters(double heading, double relative_bearing, double distance, double speed);
+   bool parseSpawnParameters(const std::string& params, double& heading, double& relative_bearing, double& distance, double& speed);
    void updateContact();
    void postNodeReport();
    void cleanContact();
-   void spawnOvertakingContact();
 
  private: // Configuration variables
   double m_spawn_distance;    // Distance ahead to spawn contact

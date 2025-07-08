@@ -76,19 +76,22 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
      else if(key == "NAV_HEADING") {
        m_ownship_heading = msg.GetDouble();
      }
-     else if(key == m_spawn_trigger) {
-       if(!m_contact_spawned) {
-         spawnContact();
+     else if(key == "SPAWN_CONTACT") {
+       string sval = msg.GetString();
+       double heading, relative_bearing, distance, speed;
+       if(parseSpawnParameters(sval, heading, relative_bearing, distance, speed)) {
+         if(!m_contact_spawned) {
+           spawnContactWithParameters(heading, relative_bearing, distance, speed);
+         } else {
+           updateContactParameters(heading, relative_bearing, distance, speed);
+         }
+       } else {
+         reportRunWarning("Invalid SPAWN_CONTACT parameters: " + sval);
        }
      }
      else if(key == "SPAWN_CLEAN") {
        if(m_contact_spawned) {
          cleanContact();
-       }
-     }
-     else if(key == "SPAWN_OVERTAKING") {
-       if(!m_contact_spawned) {
-         spawnOvertakingContact();
        }
      }
 
@@ -116,10 +119,7 @@ bool ContactSpawn::Iterate()
 {
   AppCastingMOOSApp::Iterate();
   
-  // If spawn on startup and not yet spawned, spawn contact
-  if(m_spawn_on_startup && !m_contact_spawned) {
-    spawnContact();
-  }
+  // Spawn on startup functionality removed - now only via SPAWN_CONTACT command
   
   // If contact is spawned, update its position
   if(m_contact_spawned) {
@@ -194,9 +194,8 @@ void ContactSpawn::registerVariables()
   Register("NAV_X", 0);
   Register("NAV_Y", 0);
   Register("NAV_HEADING", 0);
-  Register(m_spawn_trigger, 0);
+  Register("SPAWN_CONTACT", 0);
   Register("SPAWN_CLEAN", 0);
-  Register("SPAWN_OVERTAKING", 0);
 }
 
 
@@ -223,39 +222,6 @@ bool ContactSpawn::buildReport()
   return(true);
 }
 
-//---------------------------------------------------------
-// Procedure: spawnContact()
-//            Creates a simulated contact heading towards ownship
-
-void ContactSpawn::spawnContact()
-{
-  if(m_contact_spawned) return;
-  
-  // Calculate spawn position ahead of ownship
-  double heading_rad = m_ownship_heading * M_PI / 180.0;
-  double spawn_x = m_ownship_x + m_spawn_distance * sin(heading_rad);
-  double spawn_y = m_ownship_y + m_spawn_distance * cos(heading_rad);
-  
-  // Set contact position
-  m_contact_x = spawn_x;
-  m_contact_y = spawn_y;
-  
-  // Set contact heading to point towards ownship (opposite of ownship heading)
-  m_contact_heading = fmod(m_ownship_heading + 180.0, 360.0);
-  if(m_contact_heading < 0) m_contact_heading += 360.0;
-  
-  // Mark as spawned
-  m_contact_spawned = true;
-  m_spawn_time = MOOSTime();
-  m_last_update_time = MOOSTime();
-  
-  // Post initial NODE_REPORT
-  postNodeReport();
-  
-  reportEvent("Contact spawned: " + m_contact_name + " at (" + 
-              doubleToString(m_contact_x, 1) + ", " + 
-              doubleToString(m_contact_y, 1) + ")");
-}
 
 //---------------------------------------------------------
 // Procedure: updateContact()
@@ -301,7 +267,7 @@ void ContactSpawn::postNodeReport()
   node_report += "HDG=" + doubleToString(m_contact_heading, 2) + ",";
   node_report += "YAW=" + doubleToString(m_contact_heading, 2) + ",";
   node_report += "DEPTH=0.0,";
-  node_report += "LENGTH=6.0,";
+  node_report += "LENGTH=10.0,";
   node_report += "MODE=SPAWNED";
   
   Notify("NODE_REPORT", node_report);
@@ -341,27 +307,77 @@ void ContactSpawn::cleanContact()
 }
 
 //---------------------------------------------------------
-// Procedure: spawnOvertakingContact()
-//            Creates a simulated contact with same heading but slower speed
-void ContactSpawn::spawnOvertakingContact()
+// Procedure: parseSpawnParameters()
+//            Parses parameters from SPAWN_CONTACT string
+//            Format: "heading=RUMO,relative_bearing=MARCACAORELATIVA,distance=DISTANCIA,speed=VELOCIDADE"
+bool ContactSpawn::parseSpawnParameters(const string& params, double& heading, double& relative_bearing, double& distance, double& speed)
+{
+  // Initialize values
+  heading = 0.0;
+  relative_bearing = 0.0;
+  distance = 0.0;
+  speed = 0.0;
+  
+  // Split parameters by comma
+  vector<string> kvpairs = parseString(params, ',');
+  
+  for(unsigned int i = 0; i < kvpairs.size(); i++) {
+    string kvpair = kvpairs[i];
+    vector<string> parts = parseString(kvpair, '=');
+    
+    if(parts.size() != 2) continue;
+    
+    string key = tolower(stripBlankEnds(parts[0]));
+    string value = stripBlankEnds(parts[1]);
+    
+    if(key == "heading") {
+      heading = atof(value.c_str());
+    }
+    else if(key == "relative_bearing") {
+      relative_bearing = atof(value.c_str());
+    }
+    else if(key == "distance") {
+      distance = atof(value.c_str());
+    }
+    else if(key == "speed") {
+      speed = atof(value.c_str());
+    }
+  }
+  
+  // Validate parameters
+  if(distance <= 0 || speed <= 0) {
+    return false;
+  }
+  
+  return true;
+}
+
+//---------------------------------------------------------
+// Procedure: spawnContactWithParameters()
+//            Creates a simulated contact with specified parameters
+void ContactSpawn::spawnContactWithParameters(double heading, double relative_bearing, double distance, double speed)
 {
   if(m_contact_spawned) return;
   
-  // Calculate spawn position 200m ahead of ownship
-  double heading_rad = m_ownship_heading * M_PI / 180.0;
-  double spawn_x = m_ownship_x + 200.0 * sin(heading_rad);
-  double spawn_y = m_ownship_y + 200.0 * cos(heading_rad);
+  // Convert relative bearing to absolute bearing
+  double absolute_bearing = m_ownship_heading + relative_bearing;
+  if(absolute_bearing >= 360.0) absolute_bearing -= 360.0;
+  if(absolute_bearing < 0.0) absolute_bearing += 360.0;
+  
+  // Calculate spawn position at specified distance on the relative bearing
+  double bearing_rad = absolute_bearing * M_PI / 180.0;
+  double spawn_x = m_ownship_x + distance * sin(bearing_rad);
+  double spawn_y = m_ownship_y + distance * cos(bearing_rad);
   
   // Set contact position
   m_contact_x = spawn_x;
   m_contact_y = spawn_y;
   
-  // Set contact heading same as ownship (same direction)
-  m_contact_heading = m_ownship_heading;
+  // Set contact heading
+  m_contact_heading = heading;
   
-  // Override speed to 2 m/s for overtaking scenario
-  double original_speed = m_contact_speed;
-  m_contact_speed = 2.0;
+  // Set contact speed
+  m_contact_speed = speed;
   
   // Mark as spawned
   m_contact_spawned = true;
@@ -371,10 +387,56 @@ void ContactSpawn::spawnOvertakingContact()
   // Post initial NODE_REPORT
   postNodeReport();
   
-  reportEvent("Overtaking contact spawned: " + m_contact_name + " at (" + 
+  reportEvent("Contact spawned: " + m_contact_name + " at (" + 
               doubleToString(m_contact_x, 1) + ", " + 
-              doubleToString(m_contact_y, 1) + ") with speed " + 
-              doubleToString(m_contact_speed, 1));
+              doubleToString(m_contact_y, 1) + ") heading " + 
+              doubleToString(m_contact_heading, 1) + "° at " + 
+              doubleToString(m_contact_speed, 1) + " m/s, distance " + 
+              doubleToString(distance, 1) + "m, relative bearing " + 
+              doubleToString(relative_bearing, 1) + "°");
 }
+
+//---------------------------------------------------------
+// Procedure: updateContactParameters()
+//            Updates existing contact with new parameters
+void ContactSpawn::updateContactParameters(double heading, double relative_bearing, double distance, double speed)
+{
+  if(!m_contact_spawned) return;
+  
+  // Convert relative bearing to absolute bearing
+  double absolute_bearing = m_ownship_heading + relative_bearing;
+  if(absolute_bearing >= 360.0) absolute_bearing -= 360.0;
+  if(absolute_bearing < 0.0) absolute_bearing += 360.0;
+  
+  // Calculate new position at specified distance on the relative bearing
+  double bearing_rad = absolute_bearing * M_PI / 180.0;
+  double new_x = m_ownship_x + distance * sin(bearing_rad);
+  double new_y = m_ownship_y + distance * cos(bearing_rad);
+  
+  // Update contact position
+  m_contact_x = new_x;
+  m_contact_y = new_y;
+  
+  // Update contact heading
+  m_contact_heading = heading;
+  
+  // Update contact speed
+  m_contact_speed = speed;
+  
+  // Update last update time
+  m_last_update_time = MOOSTime();
+  
+  // Post updated NODE_REPORT
+  postNodeReport();
+  
+  reportEvent("Contact updated: " + m_contact_name + " at (" + 
+              doubleToString(m_contact_x, 1) + ", " + 
+              doubleToString(m_contact_y, 1) + ") heading " + 
+              doubleToString(m_contact_heading, 1) + "° at " + 
+              doubleToString(m_contact_speed, 1) + " m/s, distance " + 
+              doubleToString(distance, 1) + "m, relative bearing " + 
+              doubleToString(relative_bearing, 1) + "°");
+}
+
 
 
