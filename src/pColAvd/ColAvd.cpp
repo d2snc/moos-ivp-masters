@@ -242,20 +242,149 @@ bool ColAvd::Iterate()
     Notify("VIEW_POINT", end_point_str);
 
     // Create segment list connecting start and end nodes
-    XYSegList path_seglist;
+    /*XYSegList path_seglist;
     path_seglist.add_vertex(node_start->x, node_start->y);
     path_seglist.add_vertex(node_end->x, node_end->y);
     path_seglist.set_label("path");
     path_seglist.set_edge_color("black");
     path_seglist.set_edge_size(2);
     string seglist_str = path_seglist.get_spec();
-    Notify("VIEW_SEGLIST", seglist_str);
+    Notify("VIEW_SEGLIST", seglist_str);*/
 
     nodes_visualized = true;
+
+    
+  }
+
+  // Solve A* algorithm to find the shortest path
+  Solve_AStar();
+
+  // After solving A*, visualize the path if needed
+  // Draw Path by starting at the end, and following the parent node trail
+  // back to the start - the start node will not have a parent path to follow
+  if (node_end != nullptr)
+  {
+    // Create a vector to store the path nodes in reverse order
+    vector<sNode*> path_nodes;
+    sNode *p = node_end;
+    
+    // Trace back from end to start
+    while (p != nullptr)
+    {
+      path_nodes.push_back(p);
+      p = p->parent;
+    }
+    
+    // Create SEGLIST for the A* path
+    if (path_nodes.size() > 1)
+    {
+      XYSegList astar_path;
+      // Add vertices in reverse order (start to end)
+      for (int i = path_nodes.size() - 1; i >= 0; i--)
+      {
+        astar_path.add_vertex(path_nodes[i]->x, path_nodes[i]->y);
+      }
+      
+      astar_path.set_label("astar_path");
+      astar_path.set_edge_color("yellow");
+      astar_path.set_edge_size(3);
+      string astar_path_str = astar_path.get_spec();
+      Notify("VIEW_SEGLIST", astar_path_str);
+    }
   }
 
   AppCastingMOOSApp::PostReport();
   return(true);
+}
+
+void ColAvd::Solve_AStar()
+{
+  // A* algorithm implementation goes here
+  // Update the graph, all the parents, and the nodes, global goals and local goals accordingly
+		for (int x = 0; x < nodes_width; x++)
+			for (int y = 0; y < nodes_height; y++)
+			{
+				nodes[y*nodes_width + x].bVisited = false;
+				nodes[y*nodes_width + x].fGlobalGoal = INFINITY;
+				nodes[y*nodes_width + x].fLocalGoal = INFINITY;
+				nodes[y*nodes_width + x].parent = nullptr;	// No parents
+			}
+  
+  // Pitagoras for distance between two nodes
+  auto distance = [](sNode* a, sNode* b) // For convenience
+		{
+			return sqrtf((a->x - b->x)*(a->x - b->x) + (a->y - b->y)*(a->y - b->y));
+		};
+
+  // Calculate the heuristic (For standard A* is just the distance again)
+  auto heuristic = [distance](sNode* a, sNode* b) // So we can experiment with heuristic
+		{
+			return distance(a, b);
+		};
+
+  // Setup starting conditions
+  sNode *nodeCurrent = node_start; // Start node
+  node_start->fLocalGoal = 0.0f; // Zero local
+  node_start->fGlobalGoal = heuristic(node_start, node_end); 
+
+  // Add start node to not tested list - this will ensure it gets tested.
+  // As the algorithm progresses, newly discovered nodes get added to this
+  // list, and will themselves be tested later
+  list<sNode*> listNotTestedNodes;
+  listNotTestedNodes.push_back(node_start);
+
+
+  // if the not tested list contains nodes, there may be better paths
+  // which have not yet been explored. However, we will also stop 
+  // searching when we reach the target - there may well be better
+  // paths but this one will do - it wont be the longest.
+  while (!listNotTestedNodes.empty() && nodeCurrent != node_end)// Find absolutely shortest path // && nodeCurrent != nodeEnd)
+		{
+			// Sort Untested nodes by global goal, so lowest is first
+			listNotTestedNodes.sort([](const sNode* lhs, const sNode* rhs){ return lhs->fGlobalGoal < rhs->fGlobalGoal; } );
+			
+			// Front of listNotTestedNodes is potentially the lowest distance node. Our
+			// list may also contain nodes that have been visited, so ditch these...
+			while(!listNotTestedNodes.empty() && listNotTestedNodes.front()->bVisited)
+				listNotTestedNodes.pop_front();
+
+			// ...or abort because there are no valid nodes left to test
+			if (listNotTestedNodes.empty())
+				break;
+
+			nodeCurrent = listNotTestedNodes.front();
+			nodeCurrent->bVisited = true; // We only explore a node once
+			
+					
+			// Check each of this node's neighbours...
+			for (auto nodeNeighbour : nodeCurrent->vecNeighbours)
+			{
+				// ... and only if the neighbour is not visited and is 
+				// not an obstacle, add it to NotTested List
+				if (!nodeNeighbour->bVisited && nodeNeighbour->bObstacle == 0)
+					listNotTestedNodes.push_back(nodeNeighbour);
+
+				// Calculate the neighbours potential lowest parent distance
+				float fPossiblyLowerGoal = nodeCurrent->fLocalGoal + distance(nodeCurrent, nodeNeighbour);
+
+				// If choosing to path through this node is a lower distance than what 
+				// the neighbour currently has set, update the neighbour to use this node
+				// as the path source, and set its distance scores as necessary
+				if (fPossiblyLowerGoal < nodeNeighbour->fLocalGoal)
+				{
+					nodeNeighbour->parent = nodeCurrent;
+					nodeNeighbour->fLocalGoal = fPossiblyLowerGoal;
+
+					// The best path length to the neighbour being tested has changed, so
+					// update the neighbour's score. The heuristic is used to globally bias
+					// the path algorithm, so it knows if its getting better or worse. At some
+					// point the algo will realise this path is worse and abandon it, and then go
+					// and search along the next best path.
+					nodeNeighbour->fGlobalGoal = nodeNeighbour->fLocalGoal + heuristic(nodeNeighbour, node_end);
+				}
+			}	
+		}
+  
 }
 
 //---------------------------------------------------------

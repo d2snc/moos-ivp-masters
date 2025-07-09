@@ -44,6 +44,7 @@ class ColAvd : public AppCastingMOOSApp
  protected:
    void registerVariables();
    void parseNodeReport(const std::string& node_report);
+   void Solve_AStar();
 
  private: // Configuration variables
 
