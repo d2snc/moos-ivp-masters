@@ -10,6 +10,7 @@
 #include "ACTable.h"
 #include "ColAvd.h"
 #include "XYPoint.h"
+#include "XYSegList.h"
 
 using namespace std;
 
@@ -39,7 +40,10 @@ ColAvd::ColAvd()
   
   // Initialize nodes pointer
   nodes = nullptr;
+  node_start = nullptr;
+  node_end = nullptr;
   nodes_visualized = false;
+
 
   // Nodes variables for A* algorithm
   int x_start = -2657; // Start position of the grid in the map
@@ -81,6 +85,13 @@ ColAvd::ColAvd()
       if (x < x_end - 1)
         nodes[idx].vecNeighbours.push_back(&nodes[(y-y_start) * width + (x+1-x_start)]);
     }
+
+  //Giving some default values to nodes start and end
+  //(-2363,2678) -> node start
+  //(-1676,2908) -> node end
+  //How to put a node like nodestart with coordinates (-2363,2678) and nodeend with coordinates (-1676,2908)
+  node_start = &nodes[(2678 - y_start) * width + (-2363 - x_start)];
+  node_end  = &nodes[(2908 - y_start) * width + (-1676 - x_start)];
 
 }
 
@@ -197,7 +208,8 @@ bool ColAvd::Iterate()
   }
 
   // Visualize all A* grid nodes as points (only once)
-  if (!nodes_visualized) {
+  // Usd only for debugging purposes
+  /*if (!nodes_visualized) {
     vector<XYPoint> grid_points;
     for (int i = 0; i < nodes_width * nodes_height; i++) {
       XYPoint point(nodes[i].x, nodes[i].y);
@@ -208,6 +220,37 @@ bool ColAvd::Iterate()
       string point_str = point.get_spec();
       Notify("VIEW_POINT", point_str);
     }
+    nodes_visualized = true;
+  }*/
+
+  // Visualize start and end nodes
+  if (!nodes_visualized) {
+    // Visualize start node (red)
+    XYPoint start_point(node_start->x, node_start->y);
+    start_point.set_label("node_start");
+    start_point.set_vertex_size(8);
+    start_point.set_color("fill_color", "red");
+    string start_point_str = start_point.get_spec();
+    Notify("VIEW_POINT", start_point_str);
+
+    // Visualize end node (green)
+    XYPoint end_point(node_end->x, node_end->y);
+    end_point.set_label("node_end");
+    end_point.set_vertex_size(8);
+    end_point.set_color("fill_color", "green");
+    string end_point_str = end_point.get_spec();
+    Notify("VIEW_POINT", end_point_str);
+
+    // Create segment list connecting start and end nodes
+    XYSegList path_seglist;
+    path_seglist.add_vertex(node_start->x, node_start->y);
+    path_seglist.add_vertex(node_end->x, node_end->y);
+    path_seglist.set_label("path");
+    path_seglist.set_edge_color("black");
+    path_seglist.set_edge_size(2);
+    string seglist_str = path_seglist.get_spec();
+    Notify("VIEW_SEGLIST", seglist_str);
+
     nodes_visualized = true;
   }
 

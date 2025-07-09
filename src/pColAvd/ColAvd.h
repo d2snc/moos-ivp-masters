@@ -66,6 +66,8 @@ class ColAvd : public AppCastingMOOSApp
   
   // A* algorithm nodes
   sNode *nodes;
+  sNode *node_start;
+  sNode *node_end;
   int nodes_width;
   int nodes_height;
   bool nodes_visualized;
