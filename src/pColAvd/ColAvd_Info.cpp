@@ -20,7 +20,7 @@ void showSynopsis()
 {
   blk("SYNOPSIS:                                                       ");
   blk("------------------------------------                            ");
-  blk("  The pColAvd application is used for               ");
+  blk("  The pColAvd application is used for spawning contacts for Collision Avoidance Testing               ");
   blk("                                                                ");
   blk("                                                                ");
   blk("                                                                ");

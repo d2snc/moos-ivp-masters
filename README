@@ -1,3 +1,8 @@
+Usage of pColAvd app:
+
+uPokeDB lancha.moos SPAWN_CONTACT="heading=0,relative_bearing=0,distance=500,speed=5"
+
+
 ##############################################################################
 # FILE:        moos-ivp-extend/README
 # DATE:        2014/01/02
