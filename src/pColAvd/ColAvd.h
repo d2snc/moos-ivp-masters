@@ -47,6 +47,7 @@ class ColAvd : public AppCastingMOOSApp
    void parseMViewerLClick(const std::string& mviewer_lclick);
    void setObstaclesAroundPoint(double center_x, double center_y, double radius);
    void Solve_AStar();
+   void visualizeAStarPath();
 
  private: // Configuration variables
 
