@@ -76,6 +76,7 @@ class ColAvd : public AppCastingMOOSApp
   int nodes_height;
   bool nodes_visualized;
   bool obstacles_changed;
+  bool path_solved;
 };
 
 #endif 
