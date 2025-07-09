@@ -43,6 +43,7 @@ ColAvd::ColAvd()
   node_start = nullptr;
   node_end = nullptr;
   nodes_visualized = false;
+  obstacles_changed = false;
 
 
   // Nodes variables for A* algorithm
@@ -143,6 +144,10 @@ bool ColAvd::OnNewMail(MOOSMSG_LIST &NewMail)
      else if(key == "NODE_REPORT") {
        string node_report = msg.GetString();
        parseNodeReport(node_report);
+     }
+     else if(key == "MVIEWER_LCLICK") {
+       mviewer_lclick = msg.GetString();
+       parseMViewerLClick(mviewer_lclick);
      }
      else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
        reportRunWarning("Unhandled Mail: " + key);
@@ -256,8 +261,11 @@ bool ColAvd::Iterate()
     
   }
 
-  // Solve A* algorithm to find the shortest path
+  // Solve A* algorithm to find the shortest path (always solve for now, but could be optimized)
   Solve_AStar();
+
+  // Reset obstacles_changed flag after solving
+  obstacles_changed = false;
 
   // After solving A*, visualize the path if needed
   // Draw Path by starting at the end, and following the parent node trail
@@ -435,6 +443,7 @@ void ColAvd::registerVariables()
   Register("NAV_X", 0);
   Register("NAV_Y", 0);
   Register("NODE_REPORT", 0);
+  Register("MVIEWER_LCLICK", 0);
 }
 
 //---------------------------------------------------------
@@ -459,6 +468,59 @@ void ColAvd::parseNodeReport(const string& node_report)
     }
     else if(param == "SPD") {
       m_contact_speed = strtod(value.c_str(), 0);
+    }
+  }
+}
+
+//---------------------------------------------------------
+// Procedure: parseMViewerLClick()
+
+void ColAvd::parseMViewerLClick(const string& mviewer_lclick)
+{
+  vector<string> svector = parseString(mviewer_lclick, ',');
+  
+  double click_x = 0.0;
+  double click_y = 0.0;
+  
+  for(unsigned int i=0; i<svector.size(); i++) {
+    string param = biteStringX(svector[i], '=');
+    string value = svector[i];
+    
+    if(param == "x") {
+      click_x = strtod(value.c_str(), 0);
+    }
+    else if(param == "y") {
+      click_y = strtod(value.c_str(), 0);
+    }
+  }
+  
+  // Set obstacles around the clicked point
+  setObstaclesAroundPoint(click_x, click_y, 20.0);
+}
+
+//---------------------------------------------------------
+// Procedure: setObstaclesAroundPoint()
+
+void ColAvd::setObstaclesAroundPoint(double center_x, double center_y, double radius)
+{
+  // Grid parameters from constructor
+  int x_start = -2657;
+  int y_start = 2354;
+  int x_end = -1634;
+  int y_end = 3292;
+  
+  // Check all nodes in the grid
+  for (int x = x_start; x < x_end; x++) {
+    for (int y = y_start; y < y_end; y++) {
+      // Calculate distance from node to clicked point
+      double distance = hypot(x - center_x, y - center_y);
+      
+      if (distance <= radius) {
+        // Mark node as obstacle
+        int idx = (y - y_start) * nodes_width + (x - x_start);
+        nodes[idx].bObstacle = true;
+        obstacles_changed = true;
+      }
     }
   }
 }

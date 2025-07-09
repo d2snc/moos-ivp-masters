@@ -44,6 +44,8 @@ class ColAvd : public AppCastingMOOSApp
  protected:
    void registerVariables();
    void parseNodeReport(const std::string& node_report);
+   void parseMViewerLClick(const std::string& mviewer_lclick);
+   void setObstaclesAroundPoint(double center_x, double center_y, double radius);
    void Solve_AStar();
 
  private: // Configuration variables
@@ -64,6 +66,7 @@ class ColAvd : public AppCastingMOOSApp
   double beta_ts;
   double beta;
   std::string collision_status;
+  std::string mviewer_lclick;
   
   // A* algorithm nodes
   sNode *nodes;
@@ -72,6 +75,7 @@ class ColAvd : public AppCastingMOOSApp
   int nodes_width;
   int nodes_height;
   bool nodes_visualized;
+  bool obstacles_changed;
 };
 
 #endif 
