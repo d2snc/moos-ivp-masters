@@ -329,6 +329,7 @@ void ColAvd::visualizeAStarPath()
 
     if (path_nodes.size() > 1)
     {
+      // Create visualization for VIEW_SEGLIST
       XYSegList astar_path;
       for (int i = path_nodes.size() - 1; i >= 0; i--)
       {
@@ -339,6 +340,15 @@ void ColAvd::visualizeAStarPath()
       astar_path.set_edge_size(3);
       string astar_path_str = astar_path.get_spec();
       Notify("VIEW_SEGLIST", astar_path_str);
+      
+      // Create waypoints string for WPT_UPDATE
+      string waypoints_str = "points=";
+      for (int i = path_nodes.size() - 1; i >= 0; i--)
+      {
+        waypoints_str += to_string(path_nodes[i]->x) + "," + to_string(path_nodes[i]->y);
+        if (i > 0) waypoints_str += ":";
+      }
+      Notify("WPT_UPDATE", waypoints_str);
     }
   }
 }
