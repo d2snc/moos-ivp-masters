@@ -65,6 +65,7 @@ class ColAvd : public AppCastingMOOSApp
   double m_contact_speed;
   double m_contact_distance;
   double m_col_avd_distance;
+  double m_avoidance_distance;
   double phi;
   double beta_ts;
   double beta;

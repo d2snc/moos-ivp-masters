@@ -43,6 +43,7 @@ ColAvd::ColAvd()
 
   // Collision Avoidance parameters
   m_col_avd_distance = 300;
+  m_avoidance_distance = 100;
 
   // Initialize collision status
   collision_status = "NONE";
@@ -195,11 +196,20 @@ bool ColAvd::Iterate()
   }
   
   //Verify the distance and trigger when it comes closer
+  string previous_status = collision_status;
+  
   if (m_contact_distance < m_col_avd_distance) {
     // Check if its a headon situation
     if (beta_ts > -12 && beta_ts < 12) {
       collision_status = "HEADON";
     }
+  } else {
+    collision_status = "NONE";
+  }
+  
+  // Update node_end if collision status changed
+  if (collision_status != previous_status) {
+    updateNodeEnd();
   }
 
   // Only solve A* when there is a contact and (path hasn't been solved yet or obstacles have changed)
@@ -494,13 +504,32 @@ void ColAvd::updateNodeEnd()
   int x_end   = -1634;
   int y_end   = 3292;
   
-  // Use contact position directly
-  int contact_x = (int)round(m_contact_x);
-  int contact_y = (int)round(m_contact_y);
+  double target_x, target_y;
   
-  // Ensure the contact position is within grid bounds
-  if (contact_x >= x_start && contact_x < x_end && contact_y >= y_start && contact_y < y_end) {
-    int idx = (contact_y - y_start) * nodes_width + (contact_x - x_start);
+  // Check if it's a head-on collision situation
+  if (collision_status == "HEADON") {
+    // Calculate point diametrically opposite to contact heading, displaced by avoidance distance
+    double opposite_heading = m_contact_heading + 180.0;
+    if (opposite_heading >= 360.0) opposite_heading -= 360.0;
+    
+    // Convert heading to radians
+    double heading_rad = opposite_heading * M_PI / 180.0;
+    
+    // Calculate target position displaced from contact position
+    target_x = m_contact_x + m_avoidance_distance * sin(heading_rad);
+    target_y = m_contact_y + m_avoidance_distance * cos(heading_rad);
+  } else {
+    // Use contact position directly for non-headon situations
+    target_x = m_contact_x;
+    target_y = m_contact_y;
+  }
+  
+  int end_x = (int)round(target_x);
+  int end_y = (int)round(target_y);
+  
+  // Ensure the target position is within grid bounds
+  if (end_x >= x_start && end_x < x_end && end_y >= y_start && end_y < y_end) {
+    int idx = (end_y - y_start) * nodes_width + (end_x - x_start);
     node_end = &nodes[idx];
     
     // Reset path solving since end position changed
