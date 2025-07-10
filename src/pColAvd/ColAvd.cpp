@@ -408,7 +408,8 @@ void ColAvd::parseNodeReport(const string& node_report)
     else if(param == "SPD")   m_contact_speed    = strtod(value.c_str(), 0);
   }
   
-  // Update node_end when contact position changes
+  // Update contact obstacles and node_end when contact position changes
+  setContactObstacles();
   updateNodeEnd();
 }
 
@@ -466,6 +467,37 @@ void ColAvd::setObstaclesAroundPoint(double center_x, double center_y, double ra
       }
     }
   }
+}
+
+//---------------------------------------------------------
+// Procedure: setContactObstacles()
+
+void ColAvd::setContactObstacles()
+{
+  // Only set obstacles if there is a contact
+  if (m_contact_x == 0.0 && m_contact_y == 0.0) {
+    return;
+  }
+  
+  // First clear all obstacles (reset grid)
+  int x_start = -2657;
+  int y_start = 2354;
+  int x_end   = -1634;
+  int y_end   = 3292;
+  
+  for (int x = 0; x < nodes_width; x++) {
+    for (int y = 0; y < nodes_height; y++) {
+      int idx = y * nodes_width + x;
+      nodes[idx].bObstacle = false;
+    }
+  }
+  
+  // Set obstacles around contact position using avoidance distance as radius
+  setObstaclesAroundPoint(m_contact_x, m_contact_y, m_avoidance_distance);
+  
+  // Mark obstacles as changed to trigger A* recalculation
+  obstacles_changed = true;
+  path_solved = false;
 }
 
 //---------------------------------------------------------
