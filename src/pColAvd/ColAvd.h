@@ -46,6 +46,8 @@ class ColAvd : public AppCastingMOOSApp
    void parseNodeReport(const std::string& node_report);
    void parseMViewerLClick(const std::string& mviewer_lclick);
    void setObstaclesAroundPoint(double center_x, double center_y, double radius);
+   void updateNodeStart();
+   void updateNodeEnd();
    void Solve_AStar();
    void visualizeAStarPath();
 

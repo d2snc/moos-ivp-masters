@@ -97,11 +97,11 @@ ColAvd::ColAvd()
         nodes[idx].vecNeighbours.push_back(&nodes[(y-y_start) * width + (x+1-x_start)]);
     }
 
-  //Giving some default values to nodes start and end
-  //(-2363,2678) -> node start
-  //(-1676,2908) -> node end
+  // Set default node_start position until navigation data is received
+  // (-2363,2678) -> default node start
   node_start = &nodes[(2678 - y_start) * width + (-2363 - x_start)];
-  node_end   = &nodes[(2908 - y_start) * width + (-1676 - x_start)];
+  
+  // node_end will be set dynamically based on contact position
 
 }
 
@@ -136,9 +136,11 @@ bool ColAvd::OnNewMail(MOOSMSG_LIST &NewMail)
      }
      else if(key == "NAV_X") {
        m_nav_x = msg.GetDouble();
+       updateNodeStart();
      }
      else if(key == "NAV_Y") {
        m_nav_y = msg.GetDouble();
+       updateNodeStart();
      }
      else if(key == "NODE_REPORT") {
        string node_report = msg.GetString();
@@ -200,8 +202,10 @@ bool ColAvd::Iterate()
     }
   }
 
-  // Only solve A* when path hasn't been solved yet or obstacles have changed
-  if (!path_solved || obstacles_changed)
+  // Only solve A* when there is a contact and (path hasn't been solved yet or obstacles have changed)
+  bool has_contact = (m_contact_x != 0.0 || m_contact_y != 0.0);
+  
+  if (has_contact && (!path_solved || obstacles_changed))
   {
     // Solve A* algorithm to find the shortest path
     Solve_AStar();
@@ -222,6 +226,11 @@ bool ColAvd::Iterate()
 
 void ColAvd::Solve_AStar()
 {
+  // Check if node_start is valid before proceeding
+  if (node_start == nullptr || node_end == nullptr) {
+    return; // Skip A* if start or end nodes are not set
+  }
+  
   // Reinicializa nós
   for (int x = 0; x < nodes_width; x++)
     for (int y = 0; y < nodes_height; y++)
@@ -352,9 +361,8 @@ bool ColAvd::OnStartUp()
   
   registerVariables();
 
-  // Solve initial A* path at startup to avoid delay on first iteration
-  Solve_AStar();
-  visualizeAStarPath();
+  // Initial A* solve will happen automatically when NAV_X/NAV_Y are received
+  // and updateNodeStart() sets a valid node_start
 
   return(true);
 }
@@ -389,6 +397,9 @@ void ColAvd::parseNodeReport(const string& node_report)
     else if(param == "HDG")   m_contact_heading  = strtod(value.c_str(), 0);
     else if(param == "SPD")   m_contact_speed    = strtod(value.c_str(), 0);
   }
+  
+  // Update node_end when contact position changes
+  updateNodeEnd();
 }
 
 //---------------------------------------------------------
@@ -444,6 +455,56 @@ void ColAvd::setObstaclesAroundPoint(double center_x, double center_y, double ra
         path_solved = false;
       }
     }
+  }
+}
+
+//---------------------------------------------------------
+// Procedure: updateNodeStart()
+
+void ColAvd::updateNodeStart()
+{
+  // Grid parameters (same as in constructor)
+  int x_start = -2657;
+  int y_start = 2354;
+  int x_end   = -1634;
+  int y_end   = 3292;
+  
+  // Convert ship's position to grid coordinates
+  int ship_x = (int)round(m_nav_x);
+  int ship_y = (int)round(m_nav_y);
+  
+  // Ensure the ship position is within grid bounds
+  if (ship_x >= x_start && ship_x < x_end && ship_y >= y_start && ship_y < y_end) {
+    int idx = (ship_y - y_start) * nodes_width + (ship_x - x_start);
+    node_start = &nodes[idx];
+    
+    // Reset path solving since start position changed
+    path_solved = false;
+  }
+}
+
+//---------------------------------------------------------
+// Procedure: updateNodeEnd()
+
+void ColAvd::updateNodeEnd()
+{
+  // Grid parameters (same as in constructor)
+  int x_start = -2657;
+  int y_start = 2354;
+  int x_end   = -1634;
+  int y_end   = 3292;
+  
+  // Use contact position directly
+  int contact_x = (int)round(m_contact_x);
+  int contact_y = (int)round(m_contact_y);
+  
+  // Ensure the contact position is within grid bounds
+  if (contact_x >= x_start && contact_x < x_end && contact_y >= y_start && contact_y < y_end) {
+    int idx = (contact_y - y_start) * nodes_width + (contact_x - x_start);
+    node_end = &nodes[idx];
+    
+    // Reset path solving since end position changed
+    path_solved = false;
   }
 }
 
