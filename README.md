@@ -1,84 +1,25 @@
-# moos-ivp-extend
+#Código do MOOS-IvP para pesquisa de mestrado
 
-|              |                        |
-|:------------ |:---------------------- |
-| FILE:        | moos-ivp-extend/README |
-| DATE:        | 2014/01/02             |
-| DESCRIPTION: | Contains important information regarding the moos-ivp-extend repository. |
+pContactSpawn -> Gera contatos que virão em direção do navio de maneira simulada quando determinadas variáveis forem escolhidas.
+
+No caso ele vai gerar os contatos de forma a simular as regras do RIPEAM que queremos testar
 
 
-# Introduction
-
-The moos-ivp-extend repository contains examples for extending the MOOS-IvP
-Autonomy system. This includes a MOOS application and an IvP behavior.
+pAstarColAvd -> Basicamente ele faz o collision avoidance desse contato utilizando o algoritmo A-star e também respeitando as regras do ripeam
 
 
-# Directory Structure
-
-The directory structure for the moos-ivp-extend is described below:
-
-| Directory        | Description                                 |
-|:---------------- |:------------------------------------------- |
-| bin              | Directory for generated executable files    |
-| build            | Directory for build object files            |
-| build.sh         | Script for building moos-ivp-extend         |
-| CMakeLists.txt   | CMake configuration file for the project    |
-| data             | Directory for storing data                  |
-| lib              | Directory for generated library files       |
-| missions         | Directory for mission files                 |
-| README           | Contains helpful information - (this file). |
-| scripts          | Directory for script files                  |
-| src              | Directory for source code                   |
+Para gerar um contato -> uPokeDB SPAWN_CONTACT="heading=270,relative_bearing=0,distance=500,speed=5" (Rodar enquanto estiver rodando a missão)
 
 
-# Build Instructions
 
-## Linux and Mac Users
+Cronograma de testes:
 
-To build on Linux and Apple platforms, execute the build script within this
-directory:
+- Primeiro rodar com o algoritmo do próprio MOOS-IvP seguindo sempre a mesma derrota com os mesmos pontos e navios vindo em situações diferentes (marcar pontos para que apareçam os contatos)
+(Tentar simular antes para ver se está tudo okay)
 
-```bash
-   $ ./build.sh
-```
+- Depois rodar com o pColAvd que é o A* com as mesmas condições
 
-To build without using the supplied script, execute the following commands
-within this directory:
-
-```bash
-   $ mkdir -p build
-   $ cd build
-   $ cmake ../
-   $ make
-   $ cd ..
-```
+- Depois rodar com o Velocity Obstacle com as mesmas condições
 
 
-## Windows Users
-
-To build on Windows platform, open CMake using your favorite shortcut. Then
-set the source directory to be this directory and set the build directory
-to the "build" directory inside this directory.
-
-The source directory is typically next to the question:
-   "Where is the source code?"
-
-The build directory is typically next to the question:
-   "Where to build the binaries?"
-
-Alternatively, CMake can be invoked via the command line. However, you must
-specify your generator. Use "cmake --help" for a list of generators and
-additional help.
-
-
-# Environment variables
-
-The moos-ivp-extend binaries files should be added to your path to allow them
-to be launched from pAntler.
-
-In order for generated IvP Behaviors to be recognized by the IvP Helm, you
-should add the library directory to the "IVP_BEHAVIOR_DIRS" environment
-variable.
-
-# END of README
 
