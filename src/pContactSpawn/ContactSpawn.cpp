@@ -345,7 +345,7 @@ bool ContactSpawn::parseSpawnParameters(const string& params, double& heading, d
   }
   
   // Validate parameters
-  if(distance <= 0 || speed <= 0) {
+  if(distance <= 0 || speed < 0) {
     return false;
   }
   

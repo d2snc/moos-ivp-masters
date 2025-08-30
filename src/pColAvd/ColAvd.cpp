@@ -44,6 +44,10 @@ ColAvd::ColAvd()
   // Collision Avoidance parameters
   m_col_avd_distance = 300;
   m_avoidance_distance = 100;
+  m_skip_waypoints = 100;
+  m_contact_detected = false;
+  m_fixed_end_x = 0.0;
+  m_fixed_end_y = 0.0;
 
   // Initialize collision status
   collision_status = "NONE";
@@ -199,23 +203,38 @@ bool ColAvd::Iterate()
   string previous_status = collision_status;
   
   if (m_contact_distance < m_col_avd_distance) {
+    
     // Check if its a headon situation
-    if (beta_ts > -12 && beta_ts < 12) {
+    if (beta_ts > -12 && beta_ts < 12 && phi > 168 && phi < 192) {
       collision_status = "HEADON";
     }
-  } else {
+  } else if (phi > -12 && phi < 12) { //Coloquei outra lógica para o overtaking
+    collision_status = "OVERTAKING";
+  } else if (phi > 220 && phi < 250 || phi > 120 && phi < 150) {
+    collision_status = "CROSSING";
+  }
+  else {
     collision_status = "NONE";
   }
   
-  // Update node_end if collision status changed
-  if (collision_status != previous_status) {
+  // Update node_end if collision status changed or in OVERTAKING mode
+  if (collision_status != previous_status || collision_status == "OVERTAKING") {
     updateNodeEnd();
   }
 
   // Only solve A* when there is a contact and (path hasn't been solved yet or obstacles have changed)
-  bool has_contact = (m_contact_x != 0.0 || m_contact_y != 0.0);
+  bool has_contact = m_contact_detected;
   
-  if (has_contact && (!path_solved || obstacles_changed))
+  // Debug info
+  if (has_contact) {
+    string debug_msg = "A* conditions: has_contact=" + string(has_contact ? "true" : "false") + 
+                      ", path_solved=" + string(path_solved ? "true" : "false") + 
+                      ", obstacles_changed=" + string(obstacles_changed ? "true" : "false");
+    reportEvent(debug_msg);
+  }
+  // Modificação principal: executar A* tanto para HEADON quanto para OVERTAKING
+  if (has_contact && (!path_solved || obstacles_changed) && 
+      (collision_status == "HEADON" || collision_status == "OVERTAKING" || collision_status == "CROSSING"))
   {
     // Solve A* algorithm to find the shortest path
     Solve_AStar();
@@ -225,6 +244,12 @@ bool ColAvd::Iterate()
     
     // Visualize the updated path
     visualizeAStarPath();
+    
+    // Para OVERTAKING, marcar para recalcular na próxima iteração
+    // (devido ao target dinâmico)
+    if (collision_status == "OVERTAKING") {
+      path_solved = false; // Força recálculo contínuo
+    }
   }
 
   AppCastingMOOSApp::PostReport();
@@ -317,6 +342,8 @@ void ColAvd::Solve_AStar()
 
 void ColAvd::visualizeAStarPath()
 {
+  reportEvent("visualizeAStarPath() called");
+  
   if (node_end != nullptr)
   {
     vector<sNode*> path_nodes;
@@ -341,14 +368,26 @@ void ColAvd::visualizeAStarPath()
       string astar_path_str = astar_path.get_spec();
       Notify("VIEW_SEGLIST", astar_path_str);
       
-      // Create waypoints string for WPT_UPDATE
+      // Create waypoints string for WPT_UPDATE (skip initial points)
       string waypoints_str = "points=";
-      for (int i = path_nodes.size() - 1; i >= 0; i--)
+      int start_idx = max(0, (int)path_nodes.size() - 1 - m_skip_waypoints);
+      bool first_point = true;
+      
+      for (int i = start_idx; i >= 0; i--)
       {
+        if (!first_point) waypoints_str += ":";
         waypoints_str += to_string(path_nodes[i]->x) + "," + to_string(path_nodes[i]->y);
-        if (i > 0) waypoints_str += ":";
+        first_point = false;
       }
-      Notify("WPT_UPDATE", waypoints_str);
+      
+      // Only notify if we have waypoints to send
+      if (!first_point) {
+        Notify("WPT_UPDATE", waypoints_str);
+        // Debug: report waypoints sent
+        reportEvent("WPT_UPDATE sent with " + to_string(path_nodes.size() - m_skip_waypoints) + " waypoints");
+      } else {
+        reportEvent("No waypoints to send - all points skipped");
+      }
     }
   }
 }
@@ -418,9 +457,26 @@ void ColAvd::parseNodeReport(const string& node_report)
     else if(param == "SPD")   m_contact_speed    = strtod(value.c_str(), 0);
   }
   
-  // Update contact obstacles and node_end when contact position changes
+  // If this is the first contact detection, fix the end position
+  if (!m_contact_detected) {
+    m_contact_detected = true;
+    
+    // Calculate fixed end position diametrically opposite to contact heading
+    double opposite_heading = m_contact_heading + 180.0;
+    if (opposite_heading >= 360.0) opposite_heading -= 360.0;
+    
+    // Convert heading to radians
+    double heading_rad = opposite_heading * M_PI / 180.0;
+    
+    // Calculate fixed target position
+    m_fixed_end_x = m_contact_x + m_avoidance_distance * sin(heading_rad);
+    m_fixed_end_y = m_contact_y + m_avoidance_distance * cos(heading_rad);
+    
+    updateNodeEnd();
+  }
+  
+  // Always update contact obstacles when contact position changes
   setContactObstacles();
-  updateNodeEnd();
 }
 
 //---------------------------------------------------------
@@ -484,8 +540,11 @@ void ColAvd::setObstaclesAroundPoint(double center_x, double center_y, double ra
 
 void ColAvd::setContactObstacles()
 {
+  reportEvent("setContactObstacles() called");
+  
   // Only set obstacles if there is a contact
   if (m_contact_x == 0.0 && m_contact_y == 0.0) {
+    reportEvent("No contact - skipping obstacle setup");
     return;
   }
   
@@ -528,7 +587,15 @@ void ColAvd::updateNodeStart()
   // Ensure the ship position is within grid bounds
   if (ship_x >= x_start && ship_x < x_end && ship_y >= y_start && ship_y < y_end) {
     int idx = (ship_y - y_start) * nodes_width + (ship_x - x_start);
-    node_start = &nodes[idx];
+    
+    // Check if the ship's position is an obstacle
+    if (!nodes[idx].bObstacle) {
+      // Ship position is clear, use it directly
+      node_start = &nodes[idx];
+    } else {
+      // Ship position is an obstacle, find nearest non-obstacle node
+      node_start = findNearestNonObstacleNode(ship_x, ship_y, x_start, y_start, x_end, y_end);
+    }
     
     // Reset path solving since start position changed
     path_solved = false;
@@ -536,7 +603,62 @@ void ColAvd::updateNodeStart()
 }
 
 //---------------------------------------------------------
-// Procedure: updateNodeEnd()
+// Procedure: findNearestNonObstacleNode()
+
+ColAvd::sNode* ColAvd::findNearestNonObstacleNode(int target_x, int target_y, int x_start, int y_start, int x_end, int y_end)
+{
+  ColAvd::sNode* nearest_node = nullptr;
+  double min_distance = INFINITY;
+  
+  // Search in expanding circles around the target position
+  for (int radius = 1; radius <= 200; radius++) {
+    for (int dx = -radius; dx <= radius; dx++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        // Only check nodes on the circle edge (not inside)
+        if (abs(dx) != radius && abs(dy) != radius) continue;
+        
+        int check_x = target_x + dx;
+        int check_y = target_y + dy;
+        
+        // Check bounds
+        if (check_x < x_start || check_x >= x_end || check_y < y_start || check_y >= y_end) continue;
+        
+        int idx = (check_y - y_start) * nodes_width + (check_x - x_start);
+        
+        // Check if this node is not an obstacle
+        if (!nodes[idx].bObstacle) {
+          double distance = sqrt(dx*dx + dy*dy);
+          if (distance < min_distance) {
+            min_distance = distance;
+            nearest_node = &nodes[idx];
+          }
+        }
+      }
+    }
+    
+    // If we found a node at this radius, return it (closest possible)
+    if (nearest_node != nullptr) {
+      reportEvent("Found nearest non-obstacle node at distance " + to_string((int)min_distance) + " from ship");
+      return nearest_node;
+    }
+  }
+  
+  // Fallback: return any non-obstacle node if nothing found (shouldn't happen)
+  reportEvent("Warning: No non-obstacle node found within 200m radius");
+  for (int x = 0; x < nodes_width; x++) {
+    for (int y = 0; y < nodes_height; y++) {
+      int idx = y * nodes_width + x;
+      if (!nodes[idx].bObstacle) {
+        return &nodes[idx];
+      }
+    }
+  }
+  
+  return nullptr;
+}
+
+//---------------------------------------------------------
+// Procedure: updateNodeEnd() - Modificado para suportar OVERTAKING dinâmico
 
 void ColAvd::updateNodeEnd()
 {
@@ -548,37 +670,124 @@ void ColAvd::updateNodeEnd()
   
   double target_x, target_y;
   
-  // Check if it's a head-on collision situation
-  if (collision_status == "HEADON") {
-    // Calculate point diametrically opposite to contact heading, displaced by avoidance distance
-    double opposite_heading = m_contact_heading + 180.0;
-    if (opposite_heading >= 360.0) opposite_heading -= 360.0;
-    
-    // Convert heading to radians
-    double heading_rad = opposite_heading * M_PI / 180.0;
-    
-    // Calculate target position displaced from contact position
-    target_x = m_contact_x + m_avoidance_distance * sin(heading_rad);
-    target_y = m_contact_y + m_avoidance_distance * cos(heading_rad);
-  } else {
-    // Use contact position directly for non-headon situations
+  // Comportamento diferente baseado no status de colisão
+  if (collision_status == "HEADON" || collision_status == "CROSSING") {
+    // Para HEADON: usar posição fixa calculada no primeiro contato
+    if (m_contact_detected) {
+      target_x = m_fixed_end_x;
+      target_y = m_fixed_end_y;
+    } else {
+      // Fallback se ainda não detectou contato
+      target_x = m_contact_x;
+      target_y = m_contact_y;
+    }
+  }
+  else if (collision_status == "OVERTAKING") {
+    // Para OVERTAKING: calcular posição evitando cruzar pela proa
+    if (m_contact_detected && m_contact_speed > 0.1) { // Só se estiver se movendo
+      
+      // Tempo estimado para intercepção (baseado na diferença de velocidades)
+      double speed_diff = m_nav_speed - m_contact_speed;
+      double time_to_intercept = 30.0; // Tempo padrão em segundos
+      
+      // Se nossa velocidade for maior, calcular tempo real de intercepção
+      if (speed_diff > 0.5) {
+        double current_distance = hypot(m_contact_x - m_nav_x, m_contact_y - m_nav_y);
+        time_to_intercept = current_distance / speed_diff;
+        
+        // Limitar tempo de predição entre 10 e 60 segundos
+        time_to_intercept = max(10.0, min(60.0, time_to_intercept));
+      }
+      
+      // Converter heading do contato para radianos
+      double contact_heading_rad = m_contact_heading * M_PI / 180.0;
+      
+      // Calcular posição futura do contato
+      double predicted_contact_x = m_contact_x + m_contact_speed * time_to_intercept * sin(contact_heading_rad);
+      double predicted_contact_y = m_contact_y + m_contact_speed * time_to_intercept * cos(contact_heading_rad);
+      
+      // Detectar se cruzaria pela proa do contato
+      // Calcular vetor do navio próprio para a posição futura do contato
+      double vector_to_contact_x = predicted_contact_x - m_nav_x;
+      double vector_to_contact_y = predicted_contact_y - m_nav_y;
+      
+      // Calcular vetor de direção do contato
+      double contact_dir_x = sin(contact_heading_rad);
+      double contact_dir_y = cos(contact_heading_rad);
+      
+      // Produto escalar para determinar se estamos à frente ou atrás do contato
+      double dot_product = vector_to_contact_x * contact_dir_x + vector_to_contact_y * contact_dir_y;
+      
+      // Se dot_product > 0, estamos na direção da proa do contato
+      bool would_cross_bow = (dot_product > 0);
+      
+      double extra_distance = 50.0; // 50 metros de distância extra
+      
+      if (would_cross_bow) {
+        // EVITAR PROA: ir para a popa do contato
+        target_x = predicted_contact_x - extra_distance * sin(contact_heading_rad);
+        target_y = predicted_contact_y - extra_distance * cos(contact_heading_rad);
+        
+        reportEvent("OVERTAKING: Evitando proa - target na popa do contato");
+      } else {
+        // Caminho seguro pela proa (situação rara, mas possível)
+        target_x = predicted_contact_x + extra_distance * sin(contact_heading_rad);
+        target_y = predicted_contact_y + extra_distance * cos(contact_heading_rad);
+        
+        reportEvent("OVERTAKING: Caminho seguro pela proa detectado");
+      }
+      
+      // Debug info
+      string debug_msg = "OVERTAKING target calculated: time=" + to_string((int)time_to_intercept) + 
+                        "s, predicted_pos=(" + to_string((int)predicted_contact_x) + "," + 
+                        to_string((int)predicted_contact_y) + "), target=(" + 
+                        to_string((int)target_x) + "," + to_string((int)target_y) + 
+                        "), avoid_bow=" + (would_cross_bow ? "true" : "false");
+      reportEvent(debug_msg);
+      
+    } else {
+      // Fallback: se contato parado, usar posição atual pela popa
+      double contact_heading_rad = m_contact_heading * M_PI / 180.0;
+      // Sempre ir para a popa quando o contato está parado
+      target_x = m_contact_x - 100.0 * sin(contact_heading_rad);
+      target_y = m_contact_y - 100.0 * cos(contact_heading_rad);
+      
+      reportEvent("OVERTAKING: Contato parado - target na popa");
+    }
+  }
+  else {
+    // Para NONE: usar posição atual do contato (não deveria executar A*)
     target_x = m_contact_x;
     target_y = m_contact_y;
   }
   
+  // Converter para coordenadas da grade
   int end_x = (int)round(target_x);
   int end_y = (int)round(target_y);
   
-  // Ensure the target position is within grid bounds
+  // Verificar limites da grade
   if (end_x >= x_start && end_x < x_end && end_y >= y_start && end_y < y_end) {
     int idx = (end_y - y_start) * nodes_width + (end_x - x_start);
-    node_end = &nodes[idx];
+    
+    // Verificar se o nó objetivo não é um obstáculo
+    if (!nodes[idx].bObstacle) {
+      node_end = &nodes[idx];
+    } else {
+      // Buscar nó livre mais próximo se posição objetivo for obstáculo
+      node_end = findNearestNonObstacleNode(end_x, end_y, x_start, y_start, x_end, y_end);
+    }
     
     // Reset path solving since end position changed
     path_solved = false;
+    
+    // Log da mudança
+    reportEvent("Node end updated for " + collision_status + " at (" + 
+               to_string(end_x) + "," + to_string(end_y) + ")");
+  } else {
+    reportEvent("Warning: Target position out of grid bounds: (" + 
+               to_string(end_x) + "," + to_string(end_y) + ")");
   }
 }
-
 //------------------------------------------------------------
 // Procedure: buildReport()
 

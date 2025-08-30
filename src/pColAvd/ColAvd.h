@@ -49,6 +49,7 @@ class ColAvd : public AppCastingMOOSApp
    void setContactObstacles();
    void updateNodeStart();
    void updateNodeEnd();
+   ColAvd::sNode* findNearestNonObstacleNode(int target_x, int target_y, int x_start, int y_start, int x_end, int y_end);
    void Solve_AStar();
    void visualizeAStarPath();
 
@@ -67,6 +68,10 @@ class ColAvd : public AppCastingMOOSApp
   double m_contact_distance;
   double m_col_avd_distance;
   double m_avoidance_distance;
+  int m_skip_waypoints;
+  bool m_contact_detected;
+  double m_fixed_end_x;
+  double m_fixed_end_y;
   double phi;
   double beta_ts;
   double beta;
