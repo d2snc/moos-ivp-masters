@@ -89,3 +89,28 @@ Behavior=BHV_ConstantSpeed
 	
 }
 
+//----------------------------------------------
+Behavior = BHV_AvdColregsV22
+{
+  name       = avdcol_
+  pwt        = 250
+  condition  = DEPLOY = true 
+  updates    = CONTACT_INFO
+  templating = single
+
+                contact = CONTATO_TESTE
+       on_no_contact_ok = true
+            extrapolate = true
+                  decay = 30,60
+	post_per_contact_info = false
+	
+          use_refinery = true
+        pwt_outer_dist = 100
+        pwt_inner_dist = 50
+        completed_dist = 1000
+     min_util_cpa_dist = 30
+     max_util_cpa_dist = 50
+             pwt_grade = linear
+   bearing_line_config = white:0, green:0.65, yellow:0.8, red:1.0
+}
+

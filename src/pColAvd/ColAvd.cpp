@@ -683,7 +683,7 @@ void ColAvd::updateNodeEnd()
     }
   }
   else if (collision_status == "OVERTAKING") {
-    // Para OVERTAKING: calcular posição evitando cruzar pela proa
+    // Para OVERTAKING: calcular posição dinâmica na proa da embarcação
     if (m_contact_detected && m_contact_speed > 0.1) { // Só se estiver se movendo
       
       // Tempo estimado para intercepção (baseado na diferença de velocidades)
@@ -706,53 +706,23 @@ void ColAvd::updateNodeEnd()
       double predicted_contact_x = m_contact_x + m_contact_speed * time_to_intercept * sin(contact_heading_rad);
       double predicted_contact_y = m_contact_y + m_contact_speed * time_to_intercept * cos(contact_heading_rad);
       
-      // Detectar se cruzaria pela proa do contato
-      // Calcular vetor do navio próprio para a posição futura do contato
-      double vector_to_contact_x = predicted_contact_x - m_nav_x;
-      double vector_to_contact_y = predicted_contact_y - m_nav_y;
-      
-      // Calcular vetor de direção do contato
-      double contact_dir_x = sin(contact_heading_rad);
-      double contact_dir_y = cos(contact_heading_rad);
-      
-      // Produto escalar para determinar se estamos à frente ou atrás do contato
-      double dot_product = vector_to_contact_x * contact_dir_x + vector_to_contact_y * contact_dir_y;
-      
-      // Se dot_product > 0, estamos na direção da proa do contato
-      bool would_cross_bow = (dot_product > 0);
-      
-      double extra_distance = 50.0; // 50 metros de distância extra
-      
-      if (would_cross_bow) {
-        // EVITAR PROA: ir para a popa do contato
-        target_x = predicted_contact_x - extra_distance * sin(contact_heading_rad);
-        target_y = predicted_contact_y - extra_distance * cos(contact_heading_rad);
-        
-        reportEvent("OVERTAKING: Evitando proa - target na popa do contato");
-      } else {
-        // Caminho seguro pela proa (situação rara, mas possível)
-        target_x = predicted_contact_x + extra_distance * sin(contact_heading_rad);
-        target_y = predicted_contact_y + extra_distance * cos(contact_heading_rad);
-        
-        reportEvent("OVERTAKING: Caminho seguro pela proa detectado");
-      }
+      // Adicionar distância extra à frente para garantir ultrapassagem completa
+      double extra_distance = 50.0; // 50 metros à frente
+      target_x = predicted_contact_x + extra_distance * sin(contact_heading_rad);
+      target_y = predicted_contact_y + extra_distance * cos(contact_heading_rad);
       
       // Debug info
       string debug_msg = "OVERTAKING target calculated: time=" + to_string((int)time_to_intercept) + 
                         "s, predicted_pos=(" + to_string((int)predicted_contact_x) + "," + 
                         to_string((int)predicted_contact_y) + "), target=(" + 
-                        to_string((int)target_x) + "," + to_string((int)target_y) + 
-                        "), avoid_bow=" + (would_cross_bow ? "true" : "false");
+                        to_string((int)target_x) + "," + to_string((int)target_y) + ")";
       reportEvent(debug_msg);
       
     } else {
-      // Fallback: se contato parado, usar posição atual pela popa
+      // Fallback: se contato parado, usar posição atual + distância fixa à frente
       double contact_heading_rad = m_contact_heading * M_PI / 180.0;
-      // Sempre ir para a popa quando o contato está parado
-      target_x = m_contact_x - 100.0 * sin(contact_heading_rad);
-      target_y = m_contact_y - 100.0 * cos(contact_heading_rad);
-      
-      reportEvent("OVERTAKING: Contato parado - target na popa");
+      target_x = m_contact_x + 100.0 * sin(contact_heading_rad);
+      target_y = m_contact_y + 100.0 * cos(contact_heading_rad);
     }
   }
   else {

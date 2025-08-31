@@ -33,6 +33,8 @@ class ContactSpawn : public AppCastingMOOSApp
    void updateContact();
    void postNodeReport();
    void cleanContact();
+   void spawnContatoTesteOnStartup();
+   void updateContatoTesteForMovement();
 
  private: // Configuration variables
   double m_spawn_distance;    // Distance ahead to spawn contact
@@ -52,6 +54,7 @@ class ContactSpawn : public AppCastingMOOSApp
   double m_contact_y;         // Contact position Y
   double m_contact_heading;   // Contact heading
   double m_last_update_time;  // Last time contact was updated
+  double m_wpt_index;         // Current waypoint index of ownship
 };
 
 #endif 

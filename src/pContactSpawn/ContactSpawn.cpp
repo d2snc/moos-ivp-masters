@@ -36,6 +36,7 @@ ContactSpawn::ContactSpawn()
   m_contact_y = 0.0;
   m_contact_heading = 0.0;
   m_last_update_time = 0.0;
+  m_wpt_index = 0;
 }
 
 //---------------------------------------------------------
@@ -94,7 +95,14 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
          cleanContact();
        }
      }
-
+     else if(key == "WPT_INDEX") {
+       m_wpt_index = msg.GetDouble();
+       
+       // Quando WPT_INDEX for 1, atualizar CONTATO_TESTE para movimento
+       if(m_wpt_index == 1 && m_contact_spawned) {
+         updateContatoTesteForMovement();
+       }
+     }
      else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
        reportRunWarning("Unhandled Mail: " + key);
    }
@@ -181,7 +189,11 @@ bool ContactSpawn::OnStartUp()
 
   }
   
-  registerVariables();	
+  registerVariables();
+  
+  // Spawn CONTATO_TESTE on startup at specified position with zero speed
+  spawnContatoTesteOnStartup();
+  
   return(true);
 }
 
@@ -196,6 +208,7 @@ void ContactSpawn::registerVariables()
   Register("NAV_HEADING", 0);
   Register("SPAWN_CONTACT", 0);
   Register("SPAWN_CLEAN", 0);
+  Register("WPT_INDEX", 0);
 }
 
 
@@ -436,6 +449,82 @@ void ContactSpawn::updateContactParameters(double heading, double relative_beari
               doubleToString(m_contact_speed, 1) + " m/s, distance " + 
               doubleToString(distance, 1) + "m, relative bearing " + 
               doubleToString(relative_bearing, 1) + "°");
+}
+
+//---------------------------------------------------------
+// Procedure: spawnContatoTesteOnStartup()
+//            Spawna CONTATO_TESTE na posição especificada com velocidade zero no startup
+void ContactSpawn::spawnContatoTesteOnStartup()
+{
+  if(m_contact_spawned) return;
+  
+  // Posição inicial especificada: x=-2459.2, y=2682.3, lat=-22.90941156, lon=-43.16096590
+  m_contact_x = -2459.2;
+  m_contact_y = 2682.3;
+  
+  // Definir propriedades do contato
+  m_contact_heading = 0.0;    // Heading inicial
+  m_contact_speed = 0.0;      // Velocidade zero no startup
+  m_contact_name = "CONTATO_TESTE";
+  m_contact_type = "ship";
+  
+  // Marcar como spawned
+  m_contact_spawned = true;
+  m_spawn_time = MOOSTime();
+  m_last_update_time = MOOSTime();
+  
+  // Post inicial NODE_REPORT
+  postNodeReport();
+  
+  reportEvent("CONTATO_TESTE spawned on startup at (" + 
+              doubleToString(m_contact_x, 1) + ", " + 
+              doubleToString(m_contact_y, 1) + ") with zero speed");
+}
+
+//---------------------------------------------------------
+// Procedure: updateContatoTesteForMovement()
+//            Atualiza CONTATO_TESTE para movimento quando WPT_INDEX = 1
+void ContactSpawn::updateContatoTesteForMovement()
+{
+  if(!m_contact_spawned) return;
+  
+  // Coordenadas do ponto de origem: x=-2269,2636.3, lat=-22.90980541, lon=-43.15910654
+  double origem_x = -2269.0;
+  double origem_y = 2636.3;
+  
+  // Coordenadas do ponto de destino: x=-2273.2, y=2481.5, lat=-22.91120355, lon=-43.15912860  
+  double destino_x = -2273.2;
+  double destino_y = 2481.5;
+  
+  // Calcular heading do contato (direção do movimento)
+  double delta_x = destino_x - origem_x;
+  double delta_y = destino_y - origem_y;
+  double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
+  
+  // Normalizar heading para 0-360 graus
+  if(heading < 0) heading += 360.0;
+  
+  // Atualizar posição do contato para origem
+  m_contact_x = origem_x;
+  m_contact_y = origem_y;
+  
+  // Atualizar propriedades do contato para movimento
+  m_contact_heading = heading;
+  m_contact_speed = 5.0;  // 5 m/s velocidade padrão
+  
+  // Atualizar tempo
+  m_last_update_time = MOOSTime();
+  
+  // Post NODE_REPORT atualizado
+  postNodeReport();
+  
+  reportEvent("CONTATO_TESTE updated for movement when WPT_INDEX=1 at (" + 
+              doubleToString(m_contact_x, 1) + ", " + 
+              doubleToString(m_contact_y, 1) + ") heading " + 
+              doubleToString(m_contact_heading, 1) + "° rumo ao destino (" +
+              doubleToString(destino_x, 1) + ", " + 
+              doubleToString(destino_y, 1) + ") at " +
+              doubleToString(m_contact_speed, 1) + " m/s");
 }
 
 
