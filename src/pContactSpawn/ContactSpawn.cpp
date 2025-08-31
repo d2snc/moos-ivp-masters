@@ -102,6 +102,10 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
        if(m_wpt_index == 1 && m_contact_spawned) {
          updateContatoTesteForMovement();
        }
+       // Quando WPT_INDEX for 2, spawnar CONTATO_TESTE no ponto médio
+       else if(m_wpt_index == 2) {
+         spawnContatoTesteAtMidpoint();
+       }
      }
      else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
        reportRunWarning("Unhandled Mail: " + key);
@@ -524,6 +528,63 @@ void ContactSpawn::updateContatoTesteForMovement()
               doubleToString(m_contact_heading, 1) + "° rumo ao destino (" +
               doubleToString(destino_x, 1) + ", " + 
               doubleToString(destino_y, 1) + ") at " +
+              doubleToString(m_contact_speed, 1) + " m/s");
+}
+
+//---------------------------------------------------------
+// Procedure: spawnContatoTesteAtMidpoint()
+//            Spawna CONTATO_TESTE no ponto médio entre dois pontos quando WPT_INDEX = 2
+void ContactSpawn::spawnContatoTesteAtMidpoint()
+{
+  // Limpar contato existente se houver
+  if(m_contact_spawned) {
+    cleanContact();
+  }
+  
+  // Ponto A: x=-2269, y=2636.3, lat=-22.90980541, lon=-43.15910654
+  double ponto_a_x = -2269.0;
+  double ponto_a_y = 2636.3;
+  
+  // Ponto B: x=-2163.2, y=2548.2, lat=-22.91058889, lon=-43.15806463
+  double ponto_b_x = -2163.2;
+  double ponto_b_y = 2548.2;
+  
+  // Calcular ponto médio
+  double midpoint_x = (ponto_a_x + ponto_b_x) / 2.0;  // -2216.1
+  double midpoint_y = (ponto_a_y + ponto_b_y) / 2.0;  // 2592.25
+  
+  // Calcular heading do ponto médio para ponto B
+  double delta_x = ponto_b_x - midpoint_x;
+  double delta_y = ponto_b_y - midpoint_y;
+  double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
+  
+  // Normalizar heading para 0-360 graus
+  if(heading < 0) heading += 360.0;
+  
+  // Definir posição do contato no ponto médio
+  m_contact_x = midpoint_x;
+  m_contact_y = midpoint_y;
+  
+  // Definir propriedades do contato
+  m_contact_heading = heading;
+  m_contact_speed = 1.0;  // Velocidade de 1 m/s
+  m_contact_name = "CONTATO_TESTE";
+  m_contact_type = "ship";
+  
+  // Marcar como spawned
+  m_contact_spawned = true;
+  m_spawn_time = MOOSTime();
+  m_last_update_time = MOOSTime();
+  
+  // Post inicial NODE_REPORT
+  postNodeReport();
+  
+  reportEvent("CONTATO_TESTE spawned at midpoint when WPT_INDEX=2 at (" + 
+              doubleToString(m_contact_x, 1) + ", " + 
+              doubleToString(m_contact_y, 1) + ") heading " + 
+              doubleToString(m_contact_heading, 1) + "° toward point B (" +
+              doubleToString(ponto_b_x, 1) + ", " + 
+              doubleToString(ponto_b_y, 1) + ") at " +
               doubleToString(m_contact_speed, 1) + " m/s");
 }
 
