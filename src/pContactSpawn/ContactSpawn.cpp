@@ -106,6 +106,10 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
        else if(m_wpt_index == 2) {
          spawnContatoTesteAtMidpoint();
        }
+       // Quando WPT_INDEX for 3, spawnar CONTATO_TESTE cruzando
+       else if(m_wpt_index == 3) {
+         spawnContatoTesteCrossing();
+       }
      }
      else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
        reportRunWarning("Unhandled Mail: " + key);
@@ -585,6 +589,59 @@ void ContactSpawn::spawnContatoTesteAtMidpoint()
               doubleToString(m_contact_heading, 1) + "° toward point B (" +
               doubleToString(ponto_b_x, 1) + ", " + 
               doubleToString(ponto_b_y, 1) + ") at " +
+              doubleToString(m_contact_speed, 1) + " m/s");
+}
+
+//---------------------------------------------------------
+// Procedure: spawnContatoTesteCrossing()
+//            Spawna CONTATO_TESTE cruzando quando WPT_INDEX = 3
+void ContactSpawn::spawnContatoTesteCrossing()
+{
+  // Limpar contato existente se houver
+  if(m_contact_spawned) {
+    cleanContact();
+  }
+  
+  // Ponto de origem: x=-2242.9, y=2445.8, lat=-22.91152246, lon=-43.15882892
+  double origem_x = -2242.9;
+  double origem_y = 2445.8;
+  
+  // Ponto de destino: x=-2167.6, y=2708.7, lat=-22.90914026, lon=-43.15812710
+  double destino_x = -2167.6;
+  double destino_y = 2708.7;
+  
+  // Calcular heading do ponto de origem para destino
+  double delta_x = destino_x - origem_x;
+  double delta_y = destino_y - origem_y;
+  double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
+  
+  // Normalizar heading para 0-360 graus
+  if(heading < 0) heading += 360.0;
+  
+  // Definir posição do contato na origem
+  m_contact_x = origem_x;
+  m_contact_y = origem_y;
+  
+  // Definir propriedades do contato
+  m_contact_heading = heading;
+  m_contact_speed = 3.0;  // Velocidade de 3 m/s
+  m_contact_name = "CONTATO_TESTE";
+  m_contact_type = "ship";
+  
+  // Marcar como spawned
+  m_contact_spawned = true;
+  m_spawn_time = MOOSTime();
+  m_last_update_time = MOOSTime();
+  
+  // Post inicial NODE_REPORT
+  postNodeReport();
+  
+  reportEvent("CONTATO_TESTE spawned crossing when WPT_INDEX=3 from (" + 
+              doubleToString(m_contact_x, 1) + ", " + 
+              doubleToString(m_contact_y, 1) + ") heading " + 
+              doubleToString(m_contact_heading, 1) + "° toward (" +
+              doubleToString(destino_x, 1) + ", " + 
+              doubleToString(destino_y, 1) + ") at " +
               doubleToString(m_contact_speed, 1) + " m/s");
 }
 

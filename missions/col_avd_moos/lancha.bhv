@@ -33,8 +33,8 @@ Behavior = BHV_Waypoint
 
 	         speed_alt = 1.2
        use_alt_speed = true
-                lead = 8
-         lead_damper = 1
+                lead = 300
+         lead_damper = 5
        lead_to_start = true
                speed = 10   // meters per second
         capture_line = true

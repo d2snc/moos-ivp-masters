@@ -36,6 +36,7 @@ class ContactSpawn : public AppCastingMOOSApp
    void spawnContatoTesteOnStartup();
    void updateContatoTesteForMovement();
    void spawnContatoTesteAtMidpoint();
+   void spawnContatoTesteCrossing();
 
  private: // Configuration variables
   double m_spawn_distance;    // Distance ahead to spawn contact
