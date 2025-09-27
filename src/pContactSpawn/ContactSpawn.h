@@ -57,6 +57,7 @@ class ContactSpawn : public AppCastingMOOSApp
   double m_contact_heading;   // Contact heading
   double m_last_update_time;  // Last time contact was updated
   double m_wpt_index;         // Current waypoint index of ownship
+  std::string avoidance_mode; //Avoidance mode published
 };
 
 #endif 

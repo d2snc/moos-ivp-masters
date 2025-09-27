@@ -41,6 +41,9 @@
 *.blog
 *.ylog
 *.klog
+*.xlog
+*.tar.gz
+*.zip
 *.moos++
 *._moos
 *._bhv

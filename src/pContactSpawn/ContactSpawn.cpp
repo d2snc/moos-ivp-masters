@@ -111,6 +111,8 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
          spawnContatoTesteCrossing();
        }
      }
+     else if (key == "AVOIDANCE_MODE")
+      avoidance_mode = msg.GetString();
      else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
        reportRunWarning("Unhandled Mail: " + key);
    }
@@ -199,8 +201,10 @@ bool ContactSpawn::OnStartUp()
   
   registerVariables();
   
+
   // Spawn CONTATO_TESTE on startup at specified position with zero speed
-  spawnContatoTesteOnStartup();
+  // Não lembro direito pq coloquei isso, mas depois vi que não precisava
+  //spawnContatoTesteOnStartup();
   
   return(true);
 }
@@ -217,6 +221,7 @@ void ContactSpawn::registerVariables()
   Register("SPAWN_CONTACT", 0);
   Register("SPAWN_CLEAN", 0);
   Register("WPT_INDEX", 0);
+  Register("AVOIDANCE_MODE", 0);
 }
 
 
