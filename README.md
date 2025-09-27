@@ -18,3 +18,12 @@ Responsável por realizar o **collision avoidance** desse contato utilizando o a
 
 ```bash
 uPokeDB SPAWN_CONTACT="heading=270,relative_bearing=0,distance=500,speed=5"
+```
+
+## Rodando as missões
+
+Basicamente temos 3 missões, cada uma para um tipo de algoritmo:
+
+col_avd_moos -> Algoritmo padrão do MOOS-IvP
+astar -> Algoritmo A* desenvolvido
+velocity_obstacle -> Algoritmo de VO 
