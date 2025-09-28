@@ -20,7 +20,7 @@ ContactSpawn::ContactSpawn()
 {
   // Configuration variables
   m_spawn_distance = 500.0;    // 500 meters ahead
-  m_contact_speed = 5.0;       // 5 m/s
+  m_contact_speed = 3.0;       // 5 m/s
   m_contact_name = "target";   // Default contact name
   m_contact_type = "ship";     // Default contact type
   m_spawn_on_startup = false;  // Don't spawn on startup by default
@@ -523,7 +523,7 @@ void ContactSpawn::updateContatoTesteForMovement()
   
   // Atualizar propriedades do contato para movimento
   m_contact_heading = heading;
-  m_contact_speed = 5.0;  // 5 m/s velocidade padrão
+  m_contact_speed = 1.0;  // 1 m/s, bem lento para facilitar a manobra
   
   // Atualizar tempo
   m_last_update_time = MOOSTime();

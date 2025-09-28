@@ -366,8 +366,10 @@ ProcessConfig = pMarineViewer
   button_one = DEPLOY # DEPLOY=true
   button_one = MOOS_MANUAL_OVERRIDE=false # RETURN=false
   button_two = RETURN # RETURN=true
-  button_three = DEPLOY_LANCHA_A # DEPLOY_lancha_A=true # MOOS_MANUAL_lancha_A=false # RETURN_lancha_A=false
-  button_four = DEPLOY_LANCHA_B # DEPLOY_lancha_B=true
+  button_three = DEPLOY_ALGORITHM # DEPLOY_ALGORITHM=true
+  button_four = RETURN_ALGORITHM # DEPLOY_ALGORITHM=false # RETURN_ALGORITHM=true
+  button_five = REDUCE_PWT # WPT_UPDATE_ALGORITHM=pwt=50
+  button_six = INCREASE_PWT # WPT_UPDATE_ALGORITHM=pwt=250
 
   action  = MENU_KEY=deploy # DEPLOY = true # RETURN = false
   action+ = MENU_KEY=deploy # MOOS_MANUAL_OVERRIDE=false

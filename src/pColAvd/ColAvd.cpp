@@ -42,8 +42,8 @@ ColAvd::ColAvd()
   m_contact_distance = 0.0;
 
   // Collision Avoidance parameters
-  m_col_avd_distance = 300;
-  m_avoidance_distance = 100;
+  m_col_avd_distance = 50;
+  m_avoidance_distance = 50;
   m_skip_waypoints = 100;
   m_contact_detected = false;
   m_fixed_end_x = 0.0;
@@ -202,8 +202,10 @@ bool ColAvd::Iterate()
   //Verify the distance and trigger when it comes closer
   string previous_status = collision_status;
   
+  //Collision status só muda quando o ctt estiver dentro do range de distância
   if (m_contact_distance < m_col_avd_distance) {
-    
+    //Publico a variável para aumentar o pwt
+    Notify("WPT_UPDATE_ALGORITHM","pwt=250");
     // Check if its a headon situation
     if (beta_ts > -12 && beta_ts < 12 && phi > 168 && phi < 192) {
       collision_status = "HEADON";
@@ -215,6 +217,10 @@ bool ColAvd::Iterate()
   }
   else {
     collision_status = "NONE";
+
+    //Caso não tenha nenhum tipo de colisão, publica a variável para reduzir o pwt do A*
+    Notify("WPT_UPDATE_ALGORITHM","pwt=50");
+    
   }
   
   // Update node_end if collision status changed or in OVERTAKING mode
@@ -236,6 +242,10 @@ bool ColAvd::Iterate()
   if (has_contact && (!path_solved || obstacles_changed) && 
       (collision_status == "HEADON" || collision_status == "OVERTAKING" || collision_status == "CROSSING"))
   {
+    //Publica a variável para ativar o behavior
+    Notify("DEPLOY_ALGORITHM","true");
+    
+    
     // Solve A* algorithm to find the shortest path
     Solve_AStar();
     
@@ -382,9 +392,9 @@ void ColAvd::visualizeAStarPath()
       
       // Only notify if we have waypoints to send
       if (!first_point) {
-        Notify("WPT_UPDATE", waypoints_str);
+        Notify("WPT_UPDATE_ALGORITHM", waypoints_str);
         // Debug: report waypoints sent
-        reportEvent("WPT_UPDATE sent with " + to_string(path_nodes.size() - m_skip_waypoints) + " waypoints");
+        reportEvent("WPT_UPDATE_ALGORITHM sent with " + to_string(path_nodes.size() - m_skip_waypoints) + " waypoints");
       } else {
         reportEvent("No waypoints to send - all points skipped");
       }
