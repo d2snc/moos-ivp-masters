@@ -464,24 +464,27 @@ void ColAvd::parseNodeReport(const string& node_report)
     else if(param == "SPD")   m_contact_speed    = strtod(value.c_str(), 0);
   }
   
-  // If this is the first contact detection, fix the end position
-  if (!m_contact_detected) {
+  // Check if contact position changed significantly (more than 10 meters)
+  double position_change = hypot(m_contact_x - m_fixed_end_x, m_contact_y - m_fixed_end_y);
+  bool position_changed = !m_contact_detected || position_change > 10.0;
+
+  if (position_changed) {
     m_contact_detected = true;
-    
+
     // Calculate fixed end position diametrically opposite to contact heading
     double opposite_heading = m_contact_heading + 180.0;
     if (opposite_heading >= 360.0) opposite_heading -= 360.0;
-    
+
     // Convert heading to radians
     double heading_rad = opposite_heading * M_PI / 180.0;
-    
+
     // Calculate fixed target position
     m_fixed_end_x = m_contact_x + m_avoidance_distance * sin(heading_rad);
     m_fixed_end_y = m_contact_y + m_avoidance_distance * cos(heading_rad);
-    
+
     updateNodeEnd();
   }
-  
+
   // Always update contact obstacles when contact position changes
   setContactObstacles();
 }
