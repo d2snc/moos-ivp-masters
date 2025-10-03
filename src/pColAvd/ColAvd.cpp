@@ -187,7 +187,6 @@ bool ColAvd::Iterate()
 
   phi = m_contact_heading - m_nav_heading;
 
-
   beta_ts = atan2(m_contact_x - m_nav_x, m_contact_y - m_nav_y);
 
   // Convert beta_ts to degrees
@@ -204,23 +203,22 @@ bool ColAvd::Iterate()
   
   //Collision status só muda quando o ctt estiver dentro do range de distância
   if (m_contact_distance < m_col_avd_distance) {
-    //Publico a variável para aumentar o pwt
+    //Publico a variável para aumentar o pwt - Ele vai iniciar o algoritmo
     Notify("WPT_UPDATE_ALGORITHM","pwt=250");
-    // Check if its a headon situation
-    if (beta_ts > -12 && beta_ts < 12 && phi > 168 && phi < 192) {
-      collision_status = "HEADON";
-    }
-  } else if (phi > -12 && phi < 12) { //Coloquei outra lógica para o overtaking
-    collision_status = "OVERTAKING";
-  } else if (phi > 220 && phi < 250 || phi > 120 && phi < 150) {
-    collision_status = "CROSSING";
-  }
-  else {
-    collision_status = "NONE";
-
+  } else {    
     //Caso não tenha nenhum tipo de colisão, publica a variável para reduzir o pwt do A*
     Notify("WPT_UPDATE_ALGORITHM","pwt=50");
-    
+  }
+
+  if (beta_ts > -12 && beta_ts < 12 && phi > 168 && phi < 192) {
+      collision_status = "HEADON";
+    } else if (phi > -12 && phi < 12) { //Coloquei outra lógica para o overtaking
+      collision_status = "OVERTAKING";
+    } else if (phi > 220 && phi < 250 || phi > 120 && phi < 150 || (phi > -250 && phi < -220)) {
+      collision_status = "CROSSING";
+    }
+  else {
+    collision_status = "NONE";
   }
   
   // Update node_end if collision status changed or in OVERTAKING mode
@@ -244,8 +242,7 @@ bool ColAvd::Iterate()
   {
     //Publica a variável para ativar o behavior
     Notify("DEPLOY_ALGORITHM","true");
-    
-    
+  
     // Solve A* algorithm to find the shortest path
     Solve_AStar();
     
@@ -257,7 +254,7 @@ bool ColAvd::Iterate()
     
     // Para OVERTAKING, marcar para recalcular na próxima iteração
     // (devido ao target dinâmico)
-    if (collision_status == "OVERTAKING") {
+    if (collision_status == "OVERTAKING" || collision_status == "CROSSING") {
       path_solved = false; // Força recálculo contínuo
     }
   }

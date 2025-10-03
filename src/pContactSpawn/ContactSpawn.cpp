@@ -37,6 +37,7 @@ ContactSpawn::ContactSpawn()
   m_contact_heading = 0.0;
   m_last_update_time = 0.0;
   m_wpt_index = 0;
+  
 }
 
 //---------------------------------------------------------
@@ -95,21 +96,22 @@ bool ContactSpawn::OnNewMail(MOOSMSG_LIST &NewMail)
          cleanContact();
        }
      }
-     else if(key == "WPT_INDEX") {
+     else if(key == "WPT_INDEX_TRIANGULO") { //Utilizando o postsuffix para pegar apenas o behavior que tem a derrota principal
        m_wpt_index = msg.GetDouble();
        
-       // Quando WPT_INDEX for 1, atualizar CONTATO_TESTE para movimento
-       if(m_wpt_index == 1 && m_contact_spawned) {
-         updateContatoTesteForMovement();
-       }
-       // Quando WPT_INDEX for 2, spawnar CONTATO_TESTE no ponto médio
-       else if(m_wpt_index == 2) {
-         spawnContatoTesteAtMidpoint();
-       }
-       // Quando WPT_INDEX for 3, spawnar CONTATO_TESTE cruzando
-       else if(m_wpt_index == 3) {
-         spawnContatoTesteCrossing();
-       }
+      // Quando WPT_INDEX for 1, atualizar CONTATO_TESTE para movimento
+      if(m_wpt_index == 1 && m_contact_spawned) {
+        updateContatoTesteForMovement();
+      }
+      // Quando WPT_INDEX for 2, spawnar CONTATO_TESTE no ponto médio
+      else if(m_wpt_index == 2) {
+        spawnContatoTesteAtMidpoint();
+      }
+      // Quando WPT_INDEX for 3, spawnar CONTATO_TESTE cruzando
+      else if(m_wpt_index == 3) {
+        spawnContatoTesteCrossing();
+      }
+      
      }
      else if (key == "AVOIDANCE_MODE")
       avoidance_mode = msg.GetString();
@@ -220,7 +222,7 @@ void ContactSpawn::registerVariables()
   Register("NAV_HEADING", 0);
   Register("SPAWN_CONTACT", 0);
   Register("SPAWN_CLEAN", 0);
-  Register("WPT_INDEX", 0);
+  Register("WPT_INDEX_TRIANGULO", 0);
   Register("AVOIDANCE_MODE", 0);
 }
 
@@ -576,7 +578,7 @@ void ContactSpawn::spawnContatoTesteAtMidpoint()
   
   // Definir propriedades do contato
   m_contact_heading = heading;
-  m_contact_speed = 1.0;  // Velocidade de 1 m/s
+  m_contact_speed = 0;  // Velocidade de 0 m/s
   m_contact_name = "CONTATO_TESTE";
   m_contact_type = "ship";
   
@@ -629,7 +631,7 @@ void ContactSpawn::spawnContatoTesteCrossing()
   
   // Definir propriedades do contato
   m_contact_heading = heading;
-  m_contact_speed = 3.0;  // Velocidade de 3 m/s
+  m_contact_speed = 2.0;  // Velocidade de 2 m/s
   m_contact_name = "CONTATO_TESTE";
   m_contact_type = "ship";
   

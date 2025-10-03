@@ -59,7 +59,7 @@ Behavior = BHV_Waypoint
 }
 
 //----------------------------------------------
-//Esse aqui de baixo vai ser usado para a derrota principal
+//Esse aqui de baixo vai ser usado para a derrota principal que são os 3 pontos formando um triângulo
 Behavior = BHV_Waypoint
 { 
   name      = waypt_survey
@@ -67,6 +67,7 @@ Behavior = BHV_Waypoint
   condition = RETURN = false
   condition = DEPLOY = true
   endflag   = RETURN = true
+  post_suffix = TRIANGULO
 
 	endflag   = SUMMARY=speed=$[SPEED],time=$[DUR_RUN_TIME]
 	
