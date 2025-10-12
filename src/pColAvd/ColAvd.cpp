@@ -573,7 +573,53 @@ void ColAvd::setContactObstacles()
   
   // Set obstacles around contact position using avoidance distance as radius
   setObstaclesAroundPoint(m_contact_x, m_contact_y, m_avoidance_distance);
-  
+
+  // Fill the entire starboard sector with obstacles only for HEADON collision status
+  if (collision_status == "HEADON") {
+    // Convert contact heading to radians
+    double contact_heading_rad = m_contact_heading * M_PI / 180.0;
+
+    // Starboard sector: fill a wide area to the right of contact's heading
+    double sector_radius = m_avoidance_distance * 8.0; // Large radius for starboard sector
+
+    // Iterate through all nodes in the grid
+    for (int x = 0; x < nodes_width; x++) {
+      for (int y = 0; y < nodes_height; y++) {
+        int idx = y * nodes_width + x;
+
+        // Get actual coordinates of this node
+        double node_x = x_start + x;
+        double node_y = y_start + y;
+
+        // Vector from contact to this node
+        double dx = node_x - m_contact_x;
+        double dy = node_y - m_contact_y;
+        double distance = sqrt(dx * dx + dy * dy);
+
+        // Only consider nodes within the sector radius
+        if (distance > m_avoidance_distance && distance <= sector_radius) {
+          // Calculate angle from contact to this node
+          double angle_to_node = atan2(dy, dx);
+
+          // Calculate relative angle to contact's heading
+          // Contact heading points in direction: sin(heading), cos(heading)
+          double heading_angle = atan2(sin(contact_heading_rad), cos(contact_heading_rad));
+          double relative_angle = angle_to_node - heading_angle;
+
+          // Normalize angle to [-PI, PI]
+          while (relative_angle > M_PI) relative_angle -= 2 * M_PI;
+          while (relative_angle < -M_PI) relative_angle += 2 * M_PI;
+
+          // Starboard sector: -90 to 90 degrees to the right
+          // In navigation, right is negative angle from heading
+          if (relative_angle >= -M_PI/2 && relative_angle <= M_PI/2) {
+            nodes[idx].bObstacle = true;
+          }
+        }
+      }
+    }
+  }
+
   // Mark obstacles as changed to trigger A* recalculation
   obstacles_changed = true;
   path_solved = false;
