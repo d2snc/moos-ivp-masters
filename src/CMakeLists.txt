@@ -19,7 +19,7 @@ ADD_SUBDIRECTORY(lib_behaviors-test)
 ADD_SUBDIRECTORY(pExampleApp)
 ADD_SUBDIRECTORY(pXRelayTest)
 ADD_SUBDIRECTORY(pContactSpawn)
-ADD_SUBDIRECTORY(pColAvd)
+ADD_SUBDIRECTORY(pColAvd_astar)
 
 ##############################################################################
 #                           END of CMakeLists.txt

@@ -35,7 +35,7 @@ Processconfig = ANTLER
 
   Run = uSimMarineV22  @ NewConsole = false
   Run = pContactSpawn @ NewConsole = false
-  //Run = pColAvd @ NewConsole = false
+  //Run = pColAvd_astar @ NewConsole = false
 	}
 
 //------------------------------------------
@@ -53,9 +53,9 @@ ProcessConfig = uSimMarineV22
 	turn_spd_loss = 0.4
 }
 
-// pColAvd Config Block
+// pColAvd_astar Config Block
 
-ProcessConfig = pColAvd
+ProcessConfig = pColAvd_astar
 {
   AppTick 	= 1
   CommsTick = 1

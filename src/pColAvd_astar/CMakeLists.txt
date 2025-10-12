@@ -1,5 +1,5 @@
 #--------------------------------------------------------
-# The CMakeLists.txt for:                       pColAvd
+# The CMakeLists.txt for:                  pColAvd_astar
 # Author(s):                              Douglas Lima
 #--------------------------------------------------------
 
@@ -9,9 +9,9 @@ SET(SRC
   main.cpp
 )
 
-ADD_EXECUTABLE(pColAvd ${SRC})
+ADD_EXECUTABLE(pColAvd_astar ${SRC})
 
-TARGET_LINK_LIBRARIES(pColAvd
+TARGET_LINK_LIBRARIES(pColAvd_astar
    ${MOOS_LIBRARIES}
    apputil
    geometry
