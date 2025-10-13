@@ -35,6 +35,13 @@ class ColAvd_vo : public AppCastingMOOSApp
 
  private: // Configuration variables
    double m_ship_radius;  // Radius for collision cone calculation
+   double m_desired_speed;  // Desired speed (m/s)
+   double m_max_speed;      // Maximum speed (m/s)
+   double m_alpha_shift;    // Shift gain for VO
+   double m_alpha_speed;    // Weight for speed cost
+   double m_alpha_course;   // Weight for course cost
+   double m_safety_radius;  // Safety distance (m)
+   double m_collision_distance;  // Distance to trigger collision avoidance (m)
 
  private: // State variables
    // Ownship state
@@ -43,8 +50,16 @@ class ColAvd_vo : public AppCastingMOOSApp
    double m_nav_hdg;
    double m_nav_spd;
 
+   // Desired waypoint direction
+   double m_desired_heading;
+
    // Contact information
    std::map<std::string, NodeRecord> m_contacts;
+
+   // Collision avoidance outputs
+   double m_avoidance_heading;
+   double m_avoidance_speed;
+   bool m_collision_detected;
 
    // Collision cone visualization
    XYSegList m_collision_cone;

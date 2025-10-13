@@ -4,7 +4,7 @@ initialize   DEPLOY = false
 initialize   RETURN = false
 initialize   DEPLOY_ALGORITHM = false
 initialize   RETURN_ALGORITHM = false
-
+initialize   CONSTANT_HEADING = false
 	
 
 //----------------------------------------------
@@ -130,19 +130,21 @@ Behavior=BHV_Waypoint
  }
 
 //----------------------------------------------
-Behavior=BHV_ConstantSpeed
+Behavior = BHV_ConstantHeading
 {
-  name      = const_speed
-  pwt       = 100
-  condition = SPD=true
-  condition = DEPLOY = true
-  perpetual = true
-  updates   = SPEED_UPDATE
-  endflag   = SPD = false
+  // General Behavior Parameters
+  // ---------------------------
+  name         = const_hdg            // example
+  pwt          = 150                  // default
+  condition    = CONSTANT_HEADING=true    // example
+  updates      = CONST_HDG_UPDATES    // example
 
-           speed = 0.5
-		    duration = 10
-	duration_reset = CONST_SPD_RESET=true
-	
+  // Parameters specific to this behavior
+  // ------------------------------------
+            basewidth = 10           // default
+              duration = no-time-limit            // default
+              heading = 0            // default
+  heading_mismatch_var = HDG_DIFF     // example
+            peakwidth = 10           // default
+          summitdelta = 25           // default
 }
-
