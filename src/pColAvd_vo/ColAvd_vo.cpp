@@ -221,10 +221,6 @@ void ColAvd_vo::computeCollisionCone()
     double theta1 = theta - alpha;
     double theta2 = theta + alpha;
 
-    // Relative velocity of contact w.r.t. ownship
-    double cv_x = cv * cos(ch * M_PI / 180.0);
-    double cv_y = cv * sin(ch * M_PI / 180.0);
-
     // Project the cone out to a reasonable distance (based on speeds)
     double cone_length = (m_nav_spd + cv) * 100.0;  // 100 seconds ahead
     if(cone_length < 100.0)
@@ -277,6 +273,101 @@ void ColAvd_vo::computeCollisionCone()
     ship_to_contact.set_color("edge", "blue");
     ship_to_contact.set_edge_size(1);
     Notify("VIEW_SEGLIST", ship_to_contact.get_spec());
+
+    // ========== VELOCITY OBSTACLE IN VELOCITY SPACE ==========
+    // According to Fiorini & Shiller, the velocity obstacle VO is the set
+    // of velocities that will cause a collision with the obstacle.
+    // VO = {v | v in CC(O - P) + v_B}
+    // where CC is the collision cone, O is obstacle, P is robot position,
+    // and v_B is the obstacle velocity
+
+    // Contact velocity vector
+    double cv_x = cv * cos(ch * M_PI / 180.0);
+    double cv_y = cv * sin(ch * M_PI / 180.0);
+
+    // The velocity obstacle is the collision cone translated by the contact's velocity
+    // We'll draw this in a separate location on the map (offset from origin)
+
+    // Choose a location to draw the velocity space diagram
+    // Place it offset from the ownship
+    double vo_origin_x = m_nav_x + 200;  // 200m to the right
+    double vo_origin_y = m_nav_y + 200;  // 200m up
+
+    // Scale factor for velocity visualization (m/s to map units)
+    double vel_scale = 20.0;  // 20 map units per m/s
+
+    // The velocity obstacle apex is at the contact's velocity
+    double vo_apex_x = vo_origin_x + cv_x * vel_scale;
+    double vo_apex_y = vo_origin_y + cv_y * vel_scale;
+
+    // The velocity obstacle extends from the apex at the same angles as collision cone
+    double vo_length = cone_length / 10.0;  // Shorter for velocity space
+
+    double vo_x1 = vo_apex_x + vo_length * cos(theta1 * M_PI / 180.0);
+    double vo_y1 = vo_apex_y + vo_length * sin(theta1 * M_PI / 180.0);
+
+    double vo_x2 = vo_apex_x + vo_length * cos(theta2 * M_PI / 180.0);
+    double vo_y2 = vo_apex_y + vo_length * sin(theta2 * M_PI / 180.0);
+
+    // Draw velocity obstacle edges
+    XYSegList vo_edge1;
+    vo_edge1.add_vertex(vo_apex_x, vo_apex_y);
+    vo_edge1.add_vertex(vo_x1, vo_y1);
+    vo_edge1.set_label("VO_vel_edge1_" + contact.getName());
+    vo_edge1.set_color("edge", "orange");
+    vo_edge1.set_edge_size(2);
+    Notify("VIEW_SEGLIST", vo_edge1.get_spec());
+
+    XYSegList vo_edge2;
+    vo_edge2.add_vertex(vo_apex_x, vo_apex_y);
+    vo_edge2.add_vertex(vo_x2, vo_y2);
+    vo_edge2.set_label("VO_vel_edge2_" + contact.getName());
+    vo_edge2.set_color("edge", "orange");
+    vo_edge2.set_edge_size(2);
+    Notify("VIEW_SEGLIST", vo_edge2.get_spec());
+
+    // Draw arc for velocity obstacle base
+    XYSegList vo_arc;
+    double vo_arc_dist = combined_radius * vel_scale / dist;  // Scale the arc appropriately
+    for(int i = 0; i <= num_arc_points; i++) {
+      double angle = theta1 + (theta2 - theta1) * i / num_arc_points;
+      double vo_arc_x = vo_apex_x + vo_arc_dist * cos(angle * M_PI / 180.0);
+      double vo_arc_y = vo_apex_y + vo_arc_dist * sin(angle * M_PI / 180.0);
+      vo_arc.add_vertex(vo_arc_x, vo_arc_y);
+    }
+    vo_arc.set_label("VO_vel_arc_" + contact.getName());
+    vo_arc.set_color("edge", "orange");
+    vo_arc.set_edge_size(2);
+    Notify("VIEW_SEGLIST", vo_arc.get_spec());
+
+    // Draw ownship current velocity in velocity space
+    double os_vel_x_vs = vo_origin_x + m_nav_spd * cos(m_nav_hdg * M_PI / 180.0) * vel_scale;
+    double os_vel_y_vs = vo_origin_y + m_nav_spd * sin(m_nav_hdg * M_PI / 180.0) * vel_scale;
+
+    XYSegList os_vel_arrow;
+    os_vel_arrow.add_vertex(vo_origin_x, vo_origin_y);
+    os_vel_arrow.add_vertex(os_vel_x_vs, os_vel_y_vs);
+    os_vel_arrow.set_label("OS_velocity_space");
+    os_vel_arrow.set_color("edge", "green");
+    os_vel_arrow.set_edge_size(3);
+    Notify("VIEW_SEGLIST", os_vel_arrow.get_spec());
+
+    // Draw axes for velocity space (reference)
+    XYSegList vel_space_x_axis;
+    vel_space_x_axis.add_vertex(vo_origin_x - 50, vo_origin_y);
+    vel_space_x_axis.add_vertex(vo_origin_x + 50, vo_origin_y);
+    vel_space_x_axis.set_label("vel_space_x_axis");
+    vel_space_x_axis.set_color("edge", "white");
+    vel_space_x_axis.set_edge_size(1);
+    Notify("VIEW_SEGLIST", vel_space_x_axis.get_spec());
+
+    XYSegList vel_space_y_axis;
+    vel_space_y_axis.add_vertex(vo_origin_x, vo_origin_y - 50);
+    vel_space_y_axis.add_vertex(vo_origin_x, vo_origin_y + 50);
+    vel_space_y_axis.set_label("vel_space_y_axis");
+    vel_space_y_axis.set_color("edge", "white");
+    vel_space_y_axis.set_edge_size(1);
+    Notify("VIEW_SEGLIST", vel_space_y_axis.get_spec());
   }
 }
 
