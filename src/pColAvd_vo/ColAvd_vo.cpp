@@ -231,7 +231,8 @@ void ColAvd_vo::computeCollisionCone()
   }
 
   // Check if any contact is within collision avoidance distance
-  bool within_collision_distance = false;
+  // AND if contact is in ownship's bow sector
+  bool should_avoid = false;
   double closest_distance = 1e10;
 
   map<string, NodeRecord>::iterator check_it;
@@ -239,6 +240,7 @@ void ColAvd_vo::computeCollisionCone()
     NodeRecord contact = check_it->second;
     double cx = contact.getX();
     double cy = contact.getY();
+    double ch = contact.getHeading();
     double dx = cx - m_nav_x;
     double dy = cy - m_nav_y;
     double dist = sqrt(dx*dx + dy*dy);
@@ -247,13 +249,38 @@ void ColAvd_vo::computeCollisionCone()
       closest_distance = dist;
 
     if(dist < m_collision_distance) {
-      within_collision_distance = true;
-      m_collision_detected = true;
+      // Calculate relative bearing from ownship to contact
+      double angle_to_contact = atan2(dy, dx) * 180.0 / M_PI; // East = 0°
+      double bearing_to_contact = 90.0 - angle_to_contact; // Convert to North = 0°
+      while(bearing_to_contact < 0) bearing_to_contact += 360.0;
+      while(bearing_to_contact >= 360.0) bearing_to_contact -= 360.0;
+
+      double relative_bearing_own = angleDiff(bearing_to_contact, m_nav_hdg);
+
+      // Check if contact is in ownship's bow sector (±90° from heading)
+      bool contact_in_own_bow = (fabs(relative_bearing_own) < 90.0);
+
+      // Calculate relative bearing from contact to ownship
+      double angle_to_own = atan2(-dy, -dx) * 180.0 / M_PI;
+      double bearing_to_own = 90.0 - angle_to_own;
+      while(bearing_to_own < 0) bearing_to_own += 360.0;
+      while(bearing_to_own >= 360.0) bearing_to_own -= 360.0;
+
+      double relative_bearing_contact = angleDiff(bearing_to_own, ch);
+
+      // Check if ownship is in contact's bow sector (±90° from contact heading)
+      bool own_in_contact_bow = (fabs(relative_bearing_contact) < 90.0);
+
+      // Activate VO if contact is in ownship's bow AND ownship is NOT in contact's bow
+      if(contact_in_own_bow && !own_in_contact_bow) {
+        should_avoid = true;
+        m_collision_detected = true;
+      }
     }
   }
 
-  if(!within_collision_distance) {
-    // Outside collision avoidance zone - use desired heading
+  if(!should_avoid) {
+    // No collision avoidance needed
     m_avoidance_heading = m_desired_heading;
     m_avoidance_speed = m_desired_speed;
     Notify("CONSTANT_HEADING", "false");
@@ -327,7 +354,7 @@ void ColAvd_vo::computeCollisionCone()
   m_avoidance_speed = best_speed;
 
   // Notify MOOS variables for collision avoidance
-  if(within_collision_distance) {
+  if(should_avoid) {
     Notify("CONSTANT_HEADING", "true");
     string hdg_update = "heading=" + doubleToString(best_heading, 1);
     Notify("CONST_HDG_UPDATES", hdg_update);
