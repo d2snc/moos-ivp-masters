@@ -95,7 +95,6 @@ bool ColAvd_vo::Iterate()
   AppCastingMOOSApp::Iterate();
 
   computeCollisionCone();
-  visualizeCollisionCone();
 
   AppCastingMOOSApp::PostReport();
   return(true);
@@ -199,6 +198,19 @@ bool ColAvd_vo::buildReport()
 }
 
 //---------------------------------------------------------
+// Procedure: angleDiff()
+// Purpose: Calculate the difference between two angles in degrees
+//          Returns value in range [-180, 180]
+
+double ColAvd_vo::angleDiff(double a1, double a2)
+{
+  double diff = a1 - a2;
+  while(diff > 180.0) diff -= 360.0;
+  while(diff < -180.0) diff += 360.0;
+  return diff;
+}
+
+//---------------------------------------------------------
 //---------------------------------------------------------
 // Procedure: computeCollisionCone()
 // Purpose: Implement VO-based collision avoidance from Cho et al. (2019)
@@ -253,7 +265,6 @@ void ColAvd_vo::computeCollisionCone()
   double best_heading = m_nav_hdg;  // Use current heading as fallback
   double best_speed = m_desired_speed;
   double min_cost = 1e10;
-  bool found_safe_velocity = false;
 
   // Get the closest contact to focus avoidance
   NodeRecord closest_contact;
@@ -283,13 +294,14 @@ void ColAvd_vo::computeCollisionCone()
     double dist = sqrt(dx*dx + dy*dy);
 
     if(dist > m_safety_radius) {
-      // Angle to contact
-      double theta_to_contact = atan2(dy, dx) * 180.0 / M_PI;
+      // Angle to contact (atan2 returns angle from X-axis, convert to heading from North)
+      double theta_to_contact_xy = atan2(dy, dx) * 180.0 / M_PI;
+      double theta_to_contact = 90.0 - theta_to_contact_xy;  // Convert: East=0° -> North=0°
 
       // Half-angle of collision cone
       double alpha = asin(m_safety_radius / dist) * 180.0 / M_PI;
 
-      // Collision cone boundaries
+      // Collision cone boundaries (in nautical heading: North=0°, clockwise)
       double cone_left = theta_to_contact - alpha;
       double cone_right = theta_to_contact + alpha;
 
@@ -300,53 +312,14 @@ void ColAvd_vo::computeCollisionCone()
       while(cone_right >= 360.0) cone_right -= 360.0;
 
       reportEvent("VO: Collision cone from " + doubleToString(cone_left, 1) +
-                  " to " + doubleToString(cone_right, 1) + " deg");
+                  " to " + doubleToString(cone_right, 1) + " deg (North=0)");
 
-      // Sample headings to find one outside the collision cone
-      for(int hdg_deg = 0; hdg_deg < 360; hdg_deg += 1) {
-        double test_heading = hdg_deg;
+      // Desviar sempre para boreste (direita) = cone_right + margem
+      best_heading = cone_right + 2.0;
 
-        // Check if this heading is outside the collision cone
-        bool is_outside_cone = true;
-
-        // Check if heading is inside cone
-        double angle_to_left = test_heading - cone_left;
-        double angle_to_right = cone_right - test_heading;
-
-        // Normalize differences
-        while(angle_to_left < 0) angle_to_left += 360.0;
-        while(angle_to_left >= 360.0) angle_to_left -= 360.0;
-        while(angle_to_right < 0) angle_to_right += 360.0;
-        while(angle_to_right >= 360.0) angle_to_right -= 360.0;
-
-        // If both are less than the cone width, we're inside
-        double cone_width = alpha * 2.0;
-        if(angle_to_left < cone_width && angle_to_right < cone_width) {
-          is_outside_cone = false;
-        }
-
-        // Alternative: check angular distance to cone center
-        double angle_to_center = fabs(test_heading - theta_to_contact);
-        while(angle_to_center > 180.0) angle_to_center = 360.0 - angle_to_center;
-
-        if(angle_to_center < alpha + 10.0) {  // Add 10 deg safety margin
-          is_outside_cone = false;
-        }
-
-        if(is_outside_cone) {
-          // Compute cost: prefer heading close to current heading
-          double heading_diff = fabs(test_heading - m_nav_hdg);
-          while(heading_diff > 180.0) heading_diff = 360.0 - heading_diff;
-
-          double cost = heading_diff;
-
-          if(cost < min_cost) {
-            min_cost = cost;
-            best_heading = test_heading;
-            found_safe_velocity = true;
-          }
-        }
-      }
+      // Normalizar heading
+      while(best_heading < 0) best_heading += 360.0;
+      while(best_heading >= 360.0) best_heading -= 360.0;
     }
   }
 
@@ -354,28 +327,18 @@ void ColAvd_vo::computeCollisionCone()
   m_avoidance_speed = best_speed;
 
   // Notify MOOS variables for collision avoidance
-  if(within_collision_distance && found_safe_velocity) {
+  if(within_collision_distance) {
     Notify("CONSTANT_HEADING", "true");
-
-    // Format: CONST_HDG_UPDATES = heading=180.5
     string hdg_update = "heading=" + doubleToString(best_heading, 1);
     Notify("CONST_HDG_UPDATES", hdg_update);
 
     // Debug info
     string debug_msg = "VO: Collision detected at " + doubleToString(closest_distance, 1) +
-                       "m, commanding heading " + doubleToString(best_heading, 1) +
-                       " deg, speed " + doubleToString(best_speed, 1) + " m/s";
+                       "m, commanding heading " + doubleToString(best_heading, 1) + " deg";
     reportEvent(debug_msg);
   }
-  else if(within_collision_distance && !found_safe_velocity) {
-    // No safe velocity found - maintain current heading
-    Notify("CONSTANT_HEADING", "true");
-    string hdg_update = "heading=" + doubleToString(m_nav_hdg, 1);
-    Notify("CONST_HDG_UPDATES", hdg_update);
-    reportEvent("VO: WARNING - No safe velocity found! Maintaining current heading.");
-  }
 
-  // ========== VISUALIZATION ==========
+  // ========== VISUALIZATION ==========add_vertex
   // Visualize the velocity obstacles for all contacts
   double vo_origin_x = m_nav_x + 200;
   double vo_origin_y = m_nav_y + 200;
@@ -491,14 +454,6 @@ void ColAvd_vo::computeCollisionCone()
   Notify("VIEW_SEGLIST", selected_vel.get_spec());
 }
 
-//---------------------------------------------------------
-// Procedure: visualizeCollisionCone()
-
-void ColAvd_vo::visualizeCollisionCone()
-{
-  // Visualization is done in computeCollisionCone()
-  // This function is kept for potential future use
-}
 
 
 

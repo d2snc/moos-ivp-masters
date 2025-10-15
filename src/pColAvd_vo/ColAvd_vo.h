@@ -32,6 +32,7 @@ class ColAvd_vo : public AppCastingMOOSApp
    void registerVariables();
    void computeCollisionCone();
    void visualizeCollisionCone();
+   double angleDiff(double a1, double a2);
 
  private: // Configuration variables
    double m_ship_radius;  // Radius for collision cone calculation
