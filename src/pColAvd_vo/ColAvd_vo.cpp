@@ -30,8 +30,8 @@ ColAvd_vo::ColAvd_vo()
   m_alpha_shift = 0.5;  // Shift gain for VO
   m_alpha_speed = 1.0;  // Weight for speed in cost function
   m_alpha_course = 1.0;  // Weight for course in cost function
-  m_safety_radius = 50.0;  // 50 meters safety zone
-  m_collision_distance = 100.0;  // 100 meters collision avoidance activation
+  m_safety_radius = 25.0;  // 25 meters safety zone
+  m_collision_distance = 50.0;  // 50 meters collision avoidance activation
   m_desired_heading = 0;
   m_avoidance_heading = 0;
   m_avoidance_speed = 0;
