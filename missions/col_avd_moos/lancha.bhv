@@ -5,12 +5,13 @@ initialize   RETURN = false
 	
 //----------------------------------------------
 Behavior = BHV_Waypoint
-{ 
+{
   name      = waypt_survey
   pwt       = 100
   condition = RETURN = false
   condition = DEPLOY = true
   endflag   = RETURN = true
+  post_suffix = TRIANGULO
 
 	endflag   = SUMMARY=speed=$[SPEED],time=$[DUR_RUN_TIME]
 	
@@ -105,8 +106,8 @@ Behavior = BHV_AvdColregsV22
 	post_per_contact_info = false
 	
           use_refinery = true
-        pwt_outer_dist = 100
-        pwt_inner_dist = 50
+        pwt_outer_dist = 50
+        pwt_inner_dist = 30
         completed_dist = 1000
      min_util_cpa_dist = 30
      max_util_cpa_dist = 50

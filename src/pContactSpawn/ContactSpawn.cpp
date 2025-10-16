@@ -23,7 +23,7 @@ ContactSpawn::ContactSpawn()
   m_contact_speed = 3.0;       // 5 m/s
   m_contact_name = "target";   // Default contact name
   m_contact_type = "ship";     // Default contact type
-  m_spawn_on_startup = false;  // Don't spawn on startup by default
+  m_spawn_on_startup = true;  // Don't spawn on startup by default
   m_spawn_time = 0.0;
   m_spawn_trigger = "SPAWN_HEADON"; // Default trigger variable
 
