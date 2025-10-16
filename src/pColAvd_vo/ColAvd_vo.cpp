@@ -230,10 +230,10 @@ void ColAvd_vo::computeCollisionCone()
     return;
   }
 
-  // Check if any contact is within collision avoidance distance
-  // AND if contact is in ownship's bow sector
+  // Check COLREGS situations and apply sector-based activation logic
   bool should_avoid = false;
   double closest_distance = 1e10;
+  string maneuver_type = "NONE";
 
   map<string, NodeRecord>::iterator check_it;
   for(check_it = m_contacts.begin(); check_it != m_contacts.end(); check_it++) {
@@ -257,9 +257,6 @@ void ColAvd_vo::computeCollisionCone()
 
       double relative_bearing_own = angleDiff(bearing_to_contact, m_nav_hdg);
 
-      // Check if contact is in ownship's bow sector (±90° from heading)
-      bool contact_in_own_bow = (fabs(relative_bearing_own) < 90.0);
-
       // Calculate relative bearing from contact to ownship
       double angle_to_own = atan2(-dy, -dx) * 180.0 / M_PI;
       double bearing_to_own = 90.0 - angle_to_own;
@@ -268,11 +265,44 @@ void ColAvd_vo::computeCollisionCone()
 
       double relative_bearing_contact = angleDiff(bearing_to_own, ch);
 
-      // Check if ownship is in contact's bow sector (±90° from contact heading)
+      // Check sectors
+      bool contact_in_own_bow = (fabs(relative_bearing_own) < 90.0);
       bool own_in_contact_bow = (fabs(relative_bearing_contact) < 90.0);
+      bool contact_in_own_stern = (fabs(relative_bearing_own) > 90.0);
+      bool own_in_contact_stern = (fabs(relative_bearing_contact) > 90.0);
 
-      // Activate VO if contact is in ownship's bow AND ownship is NOT in contact's bow
-      if(contact_in_own_bow && !own_in_contact_bow) {
+      // Relative heading difference
+      double heading_diff = fabs(angleDiff(m_nav_hdg, ch));
+
+      // === HEAD-ON SITUATION ===
+      // Both vessels approaching (both in each other's bow sector)
+      // Heading difference close to 180° (±10°)
+      if(contact_in_own_bow && own_in_contact_bow &&
+         heading_diff > 170.0 && heading_diff < 190.0) {
+        maneuver_type = "HEAD-ON";
+        // Activate: always when head-on detected
+        // Deactivate: own vessel exits contact's bow sector
+        should_avoid = true;
+        m_collision_detected = true;
+      }
+      // === OVERTAKING SITUATION ===
+      // Ownship approaching from contact's stern sector (±67.5° from stern)
+      // Contact in ownship's bow sector
+      else if(contact_in_own_bow && own_in_contact_stern &&
+              fabs(relative_bearing_contact) > 112.5) {
+        maneuver_type = "OVERTAKING";
+        // Activate: always when overtaking detected
+        // Deactivate: own vessel reaches contact's bow sector
+        should_avoid = true;
+        m_collision_detected = true;
+      }
+      // === CROSSING SITUATION ===
+      // Contact in ownship's bow sector (starboard or port side)
+      // Not head-on or overtaking
+      else if(contact_in_own_bow) {
+        maneuver_type = "CROSSING";
+        // Activate: contact in own bow
+        // Deactivate: own vessel enters contact's bow sector
         should_avoid = true;
         m_collision_detected = true;
       }
@@ -360,7 +390,7 @@ void ColAvd_vo::computeCollisionCone()
     Notify("CONST_HDG_UPDATES", hdg_update);
 
     // Debug info
-    string debug_msg = "VO: Collision detected at " + doubleToString(closest_distance, 1) +
+    string debug_msg = "VO: " + maneuver_type + " at " + doubleToString(closest_distance, 1) +
                        "m, commanding heading " + doubleToString(best_heading, 1) + " deg";
     reportEvent(debug_msg);
   }
