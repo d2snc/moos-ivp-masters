@@ -1,0 +1,293 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{Análise Acadêmica do Algoritmo Velocity Obstacle\\
+\large Implementação em ColAvd\_vo.cpp}
+\author{Baseado em Fiorini \& Shiller (1998)}
+\date{}
+
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Fundamento Teórico}
+
+A implementação em \texttt{ColAvd\_vo.cpp} baseia-se no conceito de \textbf{Velocity Obstacle (VO)} proposto por Fiorini e Shiller (1998), que representa o conjunto de velocidades do veículo próprio que resultarão em colisão com um obstáculo móvel.
+
+\subsection{Definição do Velocity Obstacle}
+
+Matematicamente, o VO é definido como:
+
+\begin{equation}
+VO(A,B) = \left\{ \mathbf{v}_A \mid \exists t \in [0,\infty) : \|\mathbf{p}_A + t\mathbf{v}_A - (\mathbf{p}_B + t\mathbf{v}_B)\| \leq r_A + r_B \right\}
+\end{equation}
+
+Onde:
+\begin{itemize}
+    \item $\mathbf{v}_A$: velocidade do veículo próprio
+    \item $\mathbf{p}_A, \mathbf{p}_B$: posições dos veículos $A$ e $B$
+    \item $\mathbf{v}_B$: velocidade do obstáculo
+    \item $r_A, r_B$: raios de segurança
+\end{itemize}
+
+\section{Implementação do Collision Cone}
+
+\subsection{Cálculo do Cone de Colisão}
+
+A função \texttt{computeCollisionCone()} (linhas 345--373) calcula o \textbf{cone de colisão} no espaço de configuração:
+
+\begin{lstlisting}
+// Angulo ate o contato
+double theta_to_contact = 90.0 - atan2(dy, dx) * 180.0 / M_PI;
+
+// Semi-angulo do cone (linha 359)
+double alpha = asin(m_safety_radius / dist) * 180.0 / M_PI;
+
+// Limites do cone
+double cone_left = theta_to_contact - alpha;
+double cone_right = theta_to_contact + alpha;
+\end{lstlisting}
+
+Este cálculo implementa a \textbf{geometria fundamental do VO}: o semi-ângulo $\alpha$ é derivado da relação geométrica entre o raio de segurança $r$ e a distância ao obstáculo $d$:
+
+\begin{equation}
+\alpha = \arcsin\left(\frac{r_{\text{safety}}}{d}\right)
+\end{equation}
+
+\subsection{Translação para o Espaço de Velocidades}
+
+O algoritmo realiza a translação do cone de colisão para o espaço de velocidades (linhas 460--481):
+
+\begin{equation}
+VO^\tau_{A|B} = \mathbf{v}_B \oplus CC_{A|B}
+\end{equation}
+
+Onde:
+\begin{itemize}
+    \item $\oplus$: operação de soma de Minkowski
+    \item $CC_{A|B}$: collision cone centrado na origem
+    \item $\mathbf{v}_B$: velocidade do obstáculo
+\end{itemize}
+
+Implementação:
+\begin{lstlisting}
+// Apice do VO transladado pela velocidade do contato
+double vo_apex_x = vo_origin_x + cv_x * vel_scale;
+double vo_apex_y = vo_origin_y + cv_y * vel_scale;
+\end{lstlisting}
+
+\section{Integração com COLREGS}
+
+\subsection{Classificação de Situações}
+
+O algoritmo implementa três cenários das regras COLREGS (linhas 277--308):
+
+\subsubsection{Head-on (linhas 280--286)}
+\begin{itemize}
+    \item Ambos os veículos em setores de proa mútuos
+    \item Diferença de heading $\approx 180^\circ$ ($\pm 10^\circ$)
+\end{itemize}
+
+\subsubsection{Overtaking (linhas 291--298)}
+\begin{itemize}
+    \item Veículo próprio no setor de popa do contato ($\pm 67.5^\circ$ da popa)
+    \item Contato no setor de proa do próprio
+\end{itemize}
+
+\subsubsection{Crossing (linhas 302--308)}
+\begin{itemize}
+    \item Contato no setor de proa do próprio
+    \item Não é head-on nem overtaking
+\end{itemize}
+
+\subsection{Lógica de Ativação}
+
+O sistema usa \textbf{activation logic baseada em setores} conforme Cho et al. (2019):
+
+\begin{lstlisting}
+bool contact_in_own_bow = (fabs(relative_bearing_own) < 90.0);
+bool own_in_contact_bow = (fabs(relative_bearing_contact) < 90.0);
+\end{lstlisting}
+
+Os marcadores booleanos determinam a posição relativa entre os veículos:
+\begin{equation}
+\text{bow\_sector} = \begin{cases}
+\text{true}, & \text{se } |\beta| < 90^\circ \\
+\text{false}, & \text{caso contrário}
+\end{cases}
+\end{equation}
+
+onde $\beta$ é o bearing relativo.
+
+\section{Seleção de Velocidade Livre de Colisão}
+
+\subsection{Estratégia de Desvio}
+
+A implementação atual utiliza uma \textbf{estratégia simplificada de desvio por boreste} (direita), conforme linhas 374--380:
+
+\begin{lstlisting}
+best_heading = cone_right + 2.0; // Margem de seguranca de 2 graus
+\end{lstlisting}
+
+Matematicamente:
+\begin{equation}
+\theta_{\text{best}} = \theta_{\text{contact}} + \alpha + \Delta\theta_{\text{margin}}
+\end{equation}
+
+onde $\Delta\theta_{\text{margin}} = 2^\circ$.
+
+Esta abordagem é consistente com a Regra 14 das COLREGS (situação head-on).
+
+\subsection{Limitações da Implementação Atual}
+
+Diferentemente do algoritmo completo de Fiorini \& Shiller, que realiza:
+\begin{enumerate}
+    \item Amostragem do espaço de velocidades
+    \item Otimização por função de custo
+    \item Seleção da velocidade admissível mais próxima da desejada
+\end{enumerate}
+
+A implementação atual (linhas 320--324) não executa a \textbf{busca completa no espaço de velocidades}. O algoritmo original propõe:
+
+\begin{equation}
+\mathbf{v}^* = \arg\min_{\mathbf{v} \notin VO} \|\mathbf{v} - \mathbf{v}_{\text{des}}\|
+\end{equation}
+
+onde $\mathbf{v}_{\text{des}}$ é a velocidade desejada.
+
+\section{Visualização do Espaço de Velocidades}
+
+\subsection{Representação Dual}
+
+O código implementa visualização em dois espaços (linhas 398--511):
+
+\subsubsection{Espaço de Configuração (linhas 432--449)}
+\begin{itemize}
+    \item Cone vermelho emanando do veículo próprio
+    \item Representa regiões proibidas de movimento no espaço $(x, y)$
+\end{itemize}
+
+\subsubsection{Espaço de Velocidades (linhas 460--481)}
+\begin{itemize}
+    \item Cone laranja transladado pela velocidade do obstáculo
+    \item Origem deslocada em $(200, 200)$ para visualização
+    \item Fator de escala: $\lambda = 20$ (linha 402)
+\end{itemize}
+
+Transformação de coordenadas:
+\begin{align}
+x_{\text{vis}} &= x_{\text{origin}} + v_x \cdot \lambda \\
+y_{\text{vis}} &= y_{\text{origin}} + v_y \cdot \lambda
+\end{align}
+
+\subsubsection{Velocidade Selecionada (linhas 501--511)}
+\begin{itemize}
+    \item Vetor verde indicando a velocidade comandada
+    \item Comprimento proporcional à magnitude da velocidade
+\end{itemize}
+
+\section{Comparação com Fiorini \& Shiller}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Aspecto} & \textbf{Fiorini \& Shiller} & \textbf{Implementação Atual} \\ \midrule
+Cálculo do VO & \checkmark Completo & \checkmark Cone básico \\
+Translação $\mathbf{v}_B$ & \checkmark Explícita & \checkmark Visualização apenas \\
+Busca no espaço de $\mathbf{v}$ & \checkmark Amostragem + otim. & $\times$ Desvio fixo \\
+Múltiplos obstáculos & \checkmark União de VOs & $\sim$ Trata o mais próximo \\
+Função de custo & \checkmark Minimização & $\times$ Não implementada \\ \bottomrule
+\end{tabular}
+\caption{Comparação entre a teoria original e a implementação}
+\end{table}
+
+\section{Análise de Complexidade}
+
+\subsection{Complexidade Temporal}
+
+Para $n$ contatos:
+\begin{itemize}
+    \item \textbf{Classificação COLREGS}: $O(n)$ --- linhas 238--310
+    \item \textbf{Identificação do mais próximo}: $O(n)$ --- linhas 330--343
+    \item \textbf{Cálculo do cone}: $O(1)$ --- linhas 345--380
+    \item \textbf{Visualização}: $O(n)$ --- linhas 398--511
+\end{itemize}
+
+Complexidade total: $O(n)$
+
+\subsection{Complexidade Espacial}
+
+\begin{itemize}
+    \item Armazenamento de contatos: $O(n)$ no mapa \texttt{m\_contacts}
+    \item Estruturas de visualização: $O(n)$ para segmentos de linha
+\end{itemize}
+
+\section{Conclusão}
+
+A implementação representa uma \textbf{versão simplificada e híbrida} do VO clássico:
+
+\begin{itemize}
+    \item \textbf{Fundamento teórico}: Mantém a geometria do cone de colisão de Fiorini \& Shiller (Eq. 2)
+    \item \textbf{Estratégia de desvio}: Utiliza regra heurística COLREGS ao invés de otimização no espaço de velocidades
+    \item \textbf{Decisão de manobra}: Baseada em setores náuticos ao invés de análise puramente geométrica do VO
+\end{itemize}
+
+Esta abordagem prioriza \textbf{conformidade com regulações marítimas} sobre a solução matematicamente ótima do VO original, sendo adequada para aplicações em veículos de superfície não tripulados (USVs) que operam em ambientes regulamentados.
+
+\subsection{Trabalhos Futuros}
+
+Para uma implementação completa do algoritmo de Fiorini \& Shiller, sugere-se:
+
+\begin{enumerate}
+    \item Implementar amostragem sistemática do espaço de velocidades
+    \item Adicionar função de custo multi-objetivo:
+    \begin{equation}
+    J(\mathbf{v}) = \alpha_1 \|\mathbf{v} - \mathbf{v}_{\text{des}}\| + \alpha_2 \cdot d_{\text{clearance}}(\mathbf{v}) + \alpha_3 \cdot \text{COLREGS\_penalty}(\mathbf{v})
+    \end{equation}
+    \item Tratar múltiplos obstáculos através da união de VOs:
+    \begin{equation}
+    VO_{\text{total}} = \bigcup_{i=1}^{n} VO_{A|B_i}
+    \end{equation}
+    \item Implementar predição de trajetórias para horizontes temporais finitos
+\end{enumerate}
+
+\begin{thebibliography}{9}
+
+\bibitem{fiorini1998}
+P. Fiorini and Z. Shiller,
+``Motion Planning in Dynamic Environments Using Velocity Obstacles,''
+\textit{The International Journal of Robotics Research}, vol. 17, no. 7, pp. 760--772, 1998.
+
+\bibitem{cho2019}
+Y. Cho et al.,
+``Experimental validation of a velocity obstacle based collision avoidance algorithm for unmanned surface vehicles,''
+\textit{IFAC-PapersOnLine}, vol. 52, no. 21, pp. 329--334, 2019.
+
+\bibitem{colregs}
+International Maritime Organization,
+``Convention on the International Regulations for Preventing Collisions at Sea (COLREGS),'' 1972.
+
+\end{thebibliography}
+
+\end{document}
