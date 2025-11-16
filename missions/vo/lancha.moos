@@ -9,8 +9,12 @@ Community  = lancha_B
 MOOSTimeWarp = 1
 
 //Rio de Janeiro
-LatOrigin = -22.93335 
-LongOrigin = -43.136666665 
+//LatOrigin = -22.93335 
+//LongOrigin = -43.136666665 
+
+//Salvador
+LatOrigin = -12.979333
+LongOrigin = -38.566667
 
 
 //----------------------------------------------------
@@ -46,7 +50,7 @@ ProcessConfig = uSimMarineV22
   AppTick  	= 4
   CommsTick	= 4
 
-  start_pos     = x=-2203, y=2474, heading=0, speed=0
+  start_pos     = x=-8241, y=13358, heading=0, speed=0
   prefix        = NAV
   turn_rate     = 95
   thrust_map    = 0:0,18:1, 48:6, 60:9, 62:10, 70:18, 100:28
@@ -311,7 +315,7 @@ ProcessConfig = pMarineViewer
   AppTick    = 4
   CommsTick  = 4
 
-  tiff_file            = 1511geotiff.tif
+  tiff_file            = 1101geotiff.tif
 	//tiff_file            = MIT_SP.tif
 
   set_pan_x            = -90

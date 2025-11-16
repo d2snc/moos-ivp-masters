@@ -502,42 +502,42 @@ void ContactSpawn::spawnContatoTesteOnStartup()
 void ContactSpawn::updateContatoTesteForMovement()
 {
   if(!m_contact_spawned) return;
-  
-  // Coordenadas do ponto de origem: x=-2269,2636.3, lat=-22.90980541, lon=-43.15910654
-  double origem_x = -2269.0;
-  double origem_y = 2636.3;
-  
-  // Coordenadas do ponto de destino: x=-2273.2, y=2481.5, lat=-22.91120355, lon=-43.15912860  
-  double destino_x = -2273.2;
-  double destino_y = 2481.5;
-  
+
+  // Coordenadas do ponto de origem: -8275,13539.3
+  double origem_x = -8275.0;
+  double origem_y = 13539.3;
+
+  // Coordenadas do ponto de destino (onde ownship está): -8279.2,13384.5
+  double destino_x = -8279.2;
+  double destino_y = 13384.5;
+
   // Calcular heading do contato (direção do movimento)
   double delta_x = destino_x - origem_x;
   double delta_y = destino_y - origem_y;
   double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
-  
+
   // Normalizar heading para 0-360 graus
   if(heading < 0) heading += 360.0;
-  
+
   // Atualizar posição do contato para origem
   m_contact_x = origem_x;
   m_contact_y = origem_y;
-  
+
   // Atualizar propriedades do contato para movimento
   m_contact_heading = heading;
   m_contact_speed = 1.0;  // 1 m/s, bem lento para facilitar a manobra
-  
+
   // Atualizar tempo
   m_last_update_time = MOOSTime();
-  
+
   // Post NODE_REPORT atualizado
   postNodeReport();
-  
-  reportEvent("CONTATO_TESTE updated for movement when WPT_INDEX=1 at (" + 
-              doubleToString(m_contact_x, 1) + ", " + 
-              doubleToString(m_contact_y, 1) + ") heading " + 
+
+  reportEvent("CONTATO_TESTE updated for movement when WPT_INDEX=1 at (" +
+              doubleToString(m_contact_x, 1) + ", " +
+              doubleToString(m_contact_y, 1) + ") heading " +
               doubleToString(m_contact_heading, 1) + "° rumo ao destino (" +
-              doubleToString(destino_x, 1) + ", " + 
+              doubleToString(destino_x, 1) + ", " +
               doubleToString(destino_y, 1) + ") at " +
               doubleToString(m_contact_speed, 1) + " m/s");
 }
@@ -551,50 +551,50 @@ void ContactSpawn::spawnContatoTesteAtMidpoint()
   if(m_contact_spawned) {
     cleanContact();
   }
-  
-  // Ponto A: x=-2269, y=2636.3, lat=-22.90980541, lon=-43.15910654
-  double ponto_a_x = -2269.0;
-  double ponto_a_y = 2636.3;
-  
-  // Ponto B: x=-2163.2, y=2548.2, lat=-22.91058889, lon=-43.15806463
-  double ponto_b_x = -2163.2;
-  double ponto_b_y = 2548.2;
-  
+
+  // Ponto A: -8275,13539.3
+  double ponto_a_x = -8275.0;
+  double ponto_a_y = 13539.3;
+
+  // Ponto B: -8169.2,13451.2
+  double ponto_b_x = -8169.2;
+  double ponto_b_y = 13451.2;
+
   // Calcular ponto médio
-  double midpoint_x = (ponto_a_x + ponto_b_x) / 2.0;  // -2216.1
-  double midpoint_y = (ponto_a_y + ponto_b_y) / 2.0;  // 2592.25
-  
+  double midpoint_x = (ponto_a_x + ponto_b_x) / 2.0;  // -8222.1
+  double midpoint_y = (ponto_a_y + ponto_b_y) / 2.0;  // 13495.25
+
   // Calcular heading do ponto médio para ponto B
   double delta_x = ponto_b_x - midpoint_x;
   double delta_y = ponto_b_y - midpoint_y;
   double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
-  
+
   // Normalizar heading para 0-360 graus
   if(heading < 0) heading += 360.0;
-  
+
   // Definir posição do contato no ponto médio
   m_contact_x = midpoint_x;
   m_contact_y = midpoint_y;
-  
+
   // Definir propriedades do contato
   m_contact_heading = heading;
   m_contact_speed = 0;  // Velocidade de 0 m/s
   m_contact_name = "CONTATO_TESTE";
   m_contact_type = "ship";
-  
+
   // Marcar como spawned
   m_contact_spawned = true;
   m_spawn_time = MOOSTime();
   m_last_update_time = MOOSTime();
-  
+
   // Post inicial NODE_REPORT
   postNodeReport();
-  
-  reportEvent("CONTATO_TESTE spawned at midpoint when WPT_INDEX=2 at (" + 
-              doubleToString(m_contact_x, 1) + ", " + 
-              doubleToString(m_contact_y, 1) + ") heading " + 
+
+  reportEvent("CONTATO_TESTE spawned at midpoint when WPT_INDEX=2 at (" +
+              doubleToString(m_contact_x, 1) + ", " +
+              doubleToString(m_contact_y, 1) + ") heading " +
               doubleToString(m_contact_heading, 1) + "° toward point B (" +
-              doubleToString(ponto_b_x, 1) + ", " + 
+              doubleToString(ponto_b_x, 1) + ", " +
               doubleToString(ponto_b_y, 1) + ") at " +
               doubleToString(m_contact_speed, 1) + " m/s");
 }
@@ -608,46 +608,46 @@ void ContactSpawn::spawnContatoTesteCrossing()
   if(m_contact_spawned) {
     cleanContact();
   }
-  
-  // Ponto de origem: x=-2242.9, y=2445.8, lat=-22.91152246, lon=-43.15882892
-  double origem_x = -2242.9;
-  double origem_y = 2445.8;
-  
-  // Ponto de destino: x=-2167.6, y=2708.7, lat=-22.90914026, lon=-43.15812710
-  double destino_x = -2167.6;
-  double destino_y = 2708.7;
-  
+
+  // Ponto de origem: -8236,13356
+  double origem_x = -8236.0;
+  double origem_y = 13356.0;
+
+  // Ponto de destino: -8226,13462
+  double destino_x = -8226.0;
+  double destino_y = 13462.0;
+
   // Calcular heading do ponto de origem para destino
   double delta_x = destino_x - origem_x;
   double delta_y = destino_y - origem_y;
   double heading = atan2(delta_x, delta_y) * 180.0 / M_PI;
-  
+
   // Normalizar heading para 0-360 graus
   if(heading < 0) heading += 360.0;
-  
+
   // Definir posição do contato na origem
   m_contact_x = origem_x;
   m_contact_y = origem_y;
-  
+
   // Definir propriedades do contato
   m_contact_heading = heading;
   m_contact_speed = 2.0;  // Velocidade de 2 m/s
   m_contact_name = "CONTATO_TESTE";
   m_contact_type = "ship";
-  
+
   // Marcar como spawned
   m_contact_spawned = true;
   m_spawn_time = MOOSTime();
   m_last_update_time = MOOSTime();
-  
+
   // Post inicial NODE_REPORT
   postNodeReport();
-  
-  reportEvent("CONTATO_TESTE spawned crossing when WPT_INDEX=3 from (" + 
-              doubleToString(m_contact_x, 1) + ", " + 
-              doubleToString(m_contact_y, 1) + ") heading " + 
+
+  reportEvent("CONTATO_TESTE spawned crossing when WPT_INDEX=3 from (" +
+              doubleToString(m_contact_x, 1) + ", " +
+              doubleToString(m_contact_y, 1) + ") heading " +
               doubleToString(m_contact_heading, 1) + "° toward (" +
-              doubleToString(destino_x, 1) + ", " + 
+              doubleToString(destino_x, 1) + ", " +
               doubleToString(destino_y, 1) + ") at " +
               doubleToString(m_contact_speed, 1) + " m/s");
 }

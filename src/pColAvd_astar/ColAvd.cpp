@@ -62,10 +62,10 @@ ColAvd::ColAvd()
 
 
   // Nodes variables for A* algorithm
-  int x_start = -2657; // Start position of the grid in the map
-  int y_start = 2354;  // Start position of the grid in the map
-  int x_end   = -1634; // Considerando uma parte do mapa de 900x900
-  int y_end   = 3292;  // End position of the grid in the map
+  int x_start = -8687; // Start position of the grid in the map
+  int y_start = 13242;  // Start position of the grid in the map
+  int x_end   = -8113; // Considerando uma parte do mapa de 900x900
+  int y_end   = 13715;  // End position of the grid in the map
 
   // Store grid dimensions as class members
   nodes_width  = abs(x_end - x_start);
@@ -517,10 +517,10 @@ void ColAvd::parseMViewerLClick(const string& mviewer_lclick)
 void ColAvd::setObstaclesAroundPoint(double center_x, double center_y, double radius)
 {
   // Grid parameters from constructor
-  int x_start = -2657;
-  int y_start = 2354;
-  int x_end   = -1634;
-  int y_end   = 3292;
+  int x_start = -8687; 
+  int y_start = 13242;  
+  int x_end   = -8113; 
+  int y_end   = 13715;
   
   int min_x = max(x_start, (int)(center_x - radius));
   int max_x = min(x_end,   (int)(center_x + radius + 1));
@@ -559,10 +559,10 @@ void ColAvd::setContactObstacles()
   }
   
   // First clear all obstacles (reset grid)
-  int x_start = -2657;
-  int y_start = 2354;
-  int x_end   = -1634;
-  int y_end   = 3292;
+  int x_start = -8687; 
+  int y_start = 13242;  
+  int x_end   = -8113; 
+  int y_end   = 13715; 
   
   for (int x = 0; x < nodes_width; x++) {
     for (int y = 0; y < nodes_height; y++) {
@@ -631,10 +631,10 @@ void ColAvd::setContactObstacles()
 void ColAvd::updateNodeStart()
 {
   // Grid parameters (same as in constructor)
-  int x_start = -2657;
-  int y_start = 2354;
-  int x_end   = -1634;
-  int y_end   = 3292;
+  int x_start = -8687; 
+  int y_start = 13242;  
+  int x_end   = -8113; 
+  int y_end   = 13715;
   
   // Convert ship's position to grid coordinates
   int ship_x = (int)round(m_nav_x);
@@ -719,10 +719,10 @@ ColAvd::sNode* ColAvd::findNearestNonObstacleNode(int target_x, int target_y, in
 void ColAvd::updateNodeEnd()
 {
   // Grid parameters (same as in constructor)
-  int x_start = -2657;
-  int y_start = 2354;
-  int x_end   = -1634;
-  int y_end   = 3292;
+  int x_start = -8687; 
+  int y_start = 13242;  
+  int x_end   = -8113; 
+  int y_end   = 13715;
   
   double target_x, target_y;
   
